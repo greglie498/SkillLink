@@ -1,5 +1,6 @@
 import MatchBadge from './MatchBadge';
 import type { Opportunity } from '../data/mockData';
+import { Link } from 'react-router-dom';
 
 export default function OpportunityCard({ opportunity }: {opportunity: Opportunity }) {
     return (
@@ -24,9 +25,12 @@ export default function OpportunityCard({ opportunity }: {opportunity: Opportuni
                 <span>{opportunity.duration}</span>
                 <span>Due {opportunity.deadline}</span>
             </div>
-            <button className="mt-4 w-full bg-primary hover:bg-primary-dark text-white text-sm font-medium py-2 rounded-md transition-colors">
+            <Link
+                to={`/opportunities/${opportunity.id}`}
+                className='mt-4 block text-center w-full bg-primary hover:bg-primary-dark text-white text-sm font-medium py-2 rounded-md transition-colors'
+            >
                 View Details
-            </button>
+            </Link>
         </div>
     )
 }

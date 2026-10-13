@@ -1,7 +1,7 @@
 import { Link, useLocation } from "react-router-dom";
 
 const navItems = [
-    {label: 'Dashboard', path: '/'},
+    {label: 'Dashboard', path: '/dashboard'},
     {label: 'Find Opportunities', path: '/Opportunities'},
     {label: 'Applications', path: '/applications'},
     {label: 'Projects', path: '/projects'},
@@ -13,7 +13,7 @@ export default function Sidebar() {
     const location = useLocation();
 
     return (
-        <aside className="w-60 bg-slate-dark text-white flex flex-col py-6 px-4 min-h-screen">
+        <aside className="hidden md:flex w-60 bg-slate-dark text-white flex-col py-6 px-4 min-h-screen">
             <div className="text-xl font-bold text-primary mb-8 px-2">SkillLink</div>
             <nav className="flex flex-col gap-1">
                 {navItems.map((item) => {

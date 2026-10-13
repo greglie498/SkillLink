@@ -9,6 +9,14 @@ export interface Opportunity {
     deadline: string;
 }
 
+export interface TalentProfile {
+    headline: string;
+    bio: string;
+    location: string;
+    availability: string;
+    skills: string[];
+}
+
 export const recommendedOpportunities: Opportunity[] = [
     {
         id: '1',
@@ -71,5 +79,13 @@ export const applications = [
     {id: 'a2', opportunity: 'Backend for Delivery App', status: 'Shortlisted'},
     {id: 'a3', opportunity: 'Landing Page Build', status: 'Rejected'},
 ];
+
+export const mockProfile: TalentProfile = {
+    headline: 'Frontend Developer | React & Typescript',
+    bio: 'Software Engineering student student passionate about building clean, usable web apps.',
+    location: 'Nairobi, Kenya',
+    availability: '10-15 hrs/week',
+    skills: ['React', 'TypeScript', 'Tailwind CSS'],
+}
 
 export const profileCompletion = 70;

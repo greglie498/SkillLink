@@ -1,0 +1,294 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum UserRole {
+  TALENT
+  BUSINESS
+  ADMIN
+}
+
+enum AccountStatus {
+  ACTIVE
+  SUSPENDED
+  DEACTIVATED
+}
+
+enum ProficiencyLevel {
+  BEGINNER
+  INTERMEDIATE
+  ADVANCED
+}
+
+enum VerificationStatus {
+  PENDING
+  VERIFIED
+  REJECTED
+}
+
+enum OpportunityStatus {
+  DRAFT
+  PUBLISHED
+  CLOSED
+  ARCHIVED
+}
+
+enum ApplicationStatus {
+  SUBMITTED
+  SHORTLISTED
+  REJECTED
+  SELECTED
+}
+
+enum ProjectStatus {
+  SELECTED
+  IN_PROGRESS
+  SUBMITTED
+  COMPLETED
+  CANCELLED
+}
+
+model User {
+  id            String        @id @default(uuid()) @db.Uuid
+  email         String        @unique
+  passwordHash  String        @map("password_hash")
+  role          UserRole
+  emailVerified Boolean       @default(false) @map("email_verified")
+  status        AccountStatus @default(ACTIVE)
+  createdAt     DateTime      @default(now()) @map("created_at")
+
+  talentProfile         TalentProfile?
+  businessProfile       BusinessProfile?
+  notifications         Notification[]
+  feedbackGiven         Feedback[]
+  verificationsReviewed VerificationSubmission[]
+
+  @@map("users")
+}
+
+model TalentProfile {
+  id           String   @id @default(uuid()) @db.Uuid
+  userId       String   @unique @map("user_id") @db.Uuid
+  fullName     String   @map("full_name")
+  headline     String?
+  bio          String?
+  location     String?
+  availability String?
+  isVisible    Boolean  @default(true) @map("is_visible")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  user           User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  skills         TalentSkill[]
+  education      Education[]
+  portfolioLinks PortfolioLink[]
+  applications   Application[]
+
+  @@map("talent_profiles")
+}
+
+model BusinessProfile {
+  id               String             @id @default(uuid()) @db.Uuid
+  userId           String             @unique @map("user_id") @db.Uuid
+  organisationName String             @map("organisation_name")
+  industry         String?
+  description      String?
+  contactPerson    String?            @map("contact_person")
+  location         String?
+  verification     VerificationStatus @default(PENDING)
+
+  user                    User                     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  opportunities           Opportunity[]
+  verificationSubmissions VerificationSubmission[]
+
+  @@map("business_profiles")
+}
+
+model Skill {
+  id       String  @id @default(uuid()) @db.Uuid
+  name     String  @unique
+  isActive Boolean @default(true) @map("is_active")
+
+  talentSkills      TalentSkill[]
+  opportunitySkills OpportunitySkill[]
+
+  @@map("skills")
+}
+
+model TalentSkill {
+  talentProfileId String           @map("talent_profile_id") @db.Uuid
+  skillId         String           @map("skill_id") @db.Uuid
+  proficiency     ProficiencyLevel
+
+  talentProfile TalentProfile @relation(fields: [talentProfileId], references: [id], onDelete: Cascade)
+  skill         Skill         @relation(fields: [skillId], references: [id])
+
+  @@id([talentProfileId, skillId])
+  @@map("talent_skills")
+}
+
+model Education {
+  id              String @id @default(uuid()) @db.Uuid
+  talentProfileId String @map("talent_profile_id") @db.Uuid
+  institution     String
+  qualification   String
+  startYear       Int?   @map("start_year")
+  endYear         Int?   @map("end_year")
+
+  talentProfile TalentProfile @relation(fields: [talentProfileId], references: [id], onDelete: Cascade)
+
+  @@map("education")
+}
+
+model PortfolioLink {
+  id              String @id @default(uuid()) @db.Uuid
+  talentProfileId String @map("talent_profile_id") @db.Uuid
+  title           String
+  url             String
+
+  talentProfile TalentProfile              @relation(fields: [talentProfileId], references: [id], onDelete: Cascade)
+  applications  ApplicationPortfolioLink[]
+
+  @@map("portfolio_links")
+}
+
+model Category {
+  id   String @id @default(uuid()) @db.Uuid
+  name String @unique
+
+  opportunities Opportunity[]
+
+  @@map("categories")
+}
+
+model OpportunityType {
+  id   String @id @default(uuid()) @db.Uuid
+  name String @unique
+
+  opportunities Opportunity[]
+
+  @@map("opportunity_types")
+}
+
+model Opportunity {
+  id                 String            @id @default(uuid()) @db.Uuid
+  businessProfileId  String            @map("business_profile_id") @db.Uuid
+  categoryId         String            @map("category_id") @db.Uuid
+  typeId             String            @map("type_id") @db.Uuid
+  title              String
+  description        String
+  durationWeeks      Int?              @map("duration_weeks")
+  compensationAmount Decimal?          @map("compensation_amount") @db.Decimal(12, 2)
+  isRemote           Boolean           @default(false) @map("is_remote")
+  location           String?
+  deadline           DateTime          @db.Date
+  status             OpportunityStatus @default(DRAFT)
+  createdAt          DateTime          @default(now()) @map("created_at")
+
+  business     BusinessProfile    @relation(fields: [businessProfileId], references: [id])
+  category     Category           @relation(fields: [categoryId], references: [id])
+  type         OpportunityType    @relation(fields: [typeId], references: [id])
+  skills       OpportunitySkill[]
+  applications Application[]
+
+  @@map("opportunities")
+}
+
+model OpportunitySkill {
+  opportunityId String @map("opportunity_id") @db.Uuid
+  skillId       String @map("skill_id") @db.Uuid
+
+  opportunity Opportunity @relation(fields: [opportunityId], references: [id], onDelete: Cascade)
+  skill       Skill       @relation(fields: [skillId], references: [id])
+
+  @@id([opportunityId, skillId])
+  @@map("opportunity_skills")
+}
+
+model Application {
+  id              String            @id @default(uuid()) @db.Uuid
+  opportunityId   String            @map("opportunity_id") @db.Uuid
+  talentProfileId String            @map("talent_profile_id") @db.Uuid
+  proposal        String
+  status          ApplicationStatus @default(SUBMITTED)
+  createdAt       DateTime          @default(now()) @map("created_at")
+
+  opportunity    Opportunity                @relation(fields: [opportunityId], references: [id])
+  talentProfile  TalentProfile              @relation(fields: [talentProfileId], references: [id])
+  portfolioLinks ApplicationPortfolioLink[]
+  project        Project?
+
+  @@unique([opportunityId, talentProfileId])
+  @@map("applications")
+}
+
+model ApplicationPortfolioLink {
+  applicationId   String @map("application_id") @db.Uuid
+  portfolioLinkId String @map("portfolio_link_id") @db.Uuid
+
+  application   Application   @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+  portfolioLink PortfolioLink @relation(fields: [portfolioLinkId], references: [id], onDelete: Cascade)
+
+  @@id([applicationId, portfolioLinkId])
+  @@map("application_portfolio_links")
+}
+
+model Project {
+  id            String        @id @default(uuid()) @db.Uuid
+  applicationId String        @unique @map("application_id") @db.Uuid
+  status        ProjectStatus @default(SELECTED)
+  startedAt     DateTime?     @map("started_at")
+  completedAt   DateTime?     @map("completed_at")
+
+  application Application @relation(fields: [applicationId], references: [id])
+  feedback    Feedback[]
+
+  @@map("projects")
+}
+
+model Feedback {
+  id           String   @id @default(uuid()) @db.Uuid
+  projectId    String   @map("project_id") @db.Uuid
+  authorUserId String   @map("author_user_id") @db.Uuid
+  rating       Int
+  comment      String?
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  project Project @relation(fields: [projectId], references: [id])
+  author  User    @relation(fields: [authorUserId], references: [id])
+
+  @@unique([projectId, authorUserId])
+  @@map("feedback")
+}
+
+model Notification {
+  id        String   @id @default(uuid()) @db.Uuid
+  userId    String   @map("user_id") @db.Uuid
+  type      String
+  message   String
+  isRead    Boolean  @default(false) @map("is_read")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("notifications")
+}
+
+model VerificationSubmission {
+  id                String             @id @default(uuid()) @db.Uuid
+  businessProfileId String             @map("business_profile_id") @db.Uuid
+  documentUrl       String             @map("document_url")
+  status            VerificationStatus @default(PENDING)
+  reviewedBy        String?            @map("reviewed_by") @db.Uuid
+  reviewedAt        DateTime?          @map("reviewed_at")
+  createdAt         DateTime           @default(now()) @map("created_at")
+
+  business BusinessProfile @relation(fields: [businessProfileId], references: [id])
+  reviewer User?           @relation(fields: [reviewedBy], references: [id])
+
+  @@map("verification_submissions")
+}

@@ -1,32 +1,63 @@
-# React + TypeScript + Vite
+# SkillLink Frontend
 
-This template provides a minimal setup to get React working in Vite with HMR and some Oxlint rules.
+React + TypeScript web app for SkillLink, a skills-based marketplace connecting university students and early-career professionals with SMEs for paid short-term projects, internships, and entry-level work.
 
-Currently, two official plugins are available:
+## Tech Stack
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+- React + TypeScript
+- Vite
+- Tailwind CSS
+- React Router
 
-## React Compiler
+## Getting Started
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+1. Install dependencies: `npm install`
+2. Start the dev server: `npm run dev` (runs on http://localhost:5173)
+3. Type check: `npx tsc --noEmit`
+4. Production build: `npm run build`
 
-## Expanding the Oxlint configuration
+The backend API lives in the `backend/` folder and runs on http://localhost:4000. See its README for setup.
 
-If you are developing a production application, we recommend enabling type-aware lint rules by installing `oxlint-tsgolint` and editing `.oxlintrc.json`:
+## Current Status
 
-```json
-{
-  "$schema": "./node_modules/oxlint/configuration_schema.json",
-  "plugins": ["react", "typescript", "oxc"],
-  "options": {
-    "typeAware": true
-  },
-  "rules": {
-    "react/rules-of-hooks": "error",
-    "react/only-export-components": ["warn", { "allowConstantExport": true }]
-  }
-}
+This is a work in progress for the SWE 4900A capstone.
+
+| Area | Status |
+|---|---|
+| Landing page | Built |
+| Register / Login forms with client-side validation | Built (not yet connected to the API) |
+| Talent dashboard | Built (mock data) |
+| Browse opportunities with search and skill filter | Built (mock data) |
+| Opportunity details | Built (mock data) |
+| Talent profile editing with skills add/remove | Built (mock data, saves to local state only) |
+| Connection to backend API | In progress |
+| Business and admin screens | Not started |
+
+## Routes
+
+| Path | Page |
+|---|---|
+| `/` | Landing page |
+| `/login` | Login |
+| `/register` | Register (Talent or Business) |
+| `/dashboard` | Talent dashboard |
+| `/opportunities` | Browse opportunities |
+| `/opportunities/:id` | Opportunity details |
+| `/profile` | Edit talent profile |
+
+## Project Structure
+
+```
+src/
+  components/   Reusable UI (Sidebar, TopNav, OpportunityCard, FormField, SkillsInput, ...)
+  pages/        One file per route
+  data/         Mock data used until the API is connected
+  utils/        Shared helpers, including form validation
 ```
 
-See the [Oxlint rules documentation](https://oxc.rs/docs/guide/usage/linter/rules) for the full list of rules and categories.
+## Design System
+
+- Font: Inter
+- Primary accent: coral `#FF6B4A`; dark slate `#2D3142` for navigation
+- Spacing on an 8px base unit
+- Colors are defined as Tailwind tokens in `tailwind.config.js`

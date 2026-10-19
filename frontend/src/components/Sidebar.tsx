@@ -1,4 +1,5 @@
-import { Link, useLocation } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
+import { clearSession } from "../lib/auth";
 
 const navItems = [
     {label: 'Dashboard', path: '/dashboard'},
@@ -11,6 +12,7 @@ const navItems = [
 
 export default function Sidebar() {
     const location = useLocation();
+    const navigate = useNavigate();
 
     return (
         <aside className="hidden md:flex w-60 bg-slate-dark text-white flex-col py-6 px-4 min-h-screen">
@@ -32,6 +34,15 @@ export default function Sidebar() {
                     );
                 })}
             </nav>
+            <button
+                onClick={() => {
+                    clearSession();
+                    navigate('/');
+                }}
+                className="mt-auto px-3 py-2 rounded-md text-sm font-medium text-left text-gray-300 hover:text-white transition-colors"
+            >
+                Logout
+            </button>
         </aside>
     );
 }

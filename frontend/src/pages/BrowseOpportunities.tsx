@@ -1,20 +1,46 @@
-import { useState, useMemo } from "react";
+import { useState, useEffect } from "react";
 import Sidebar from "../components/Sidebar";
 import OpportunityCard from "../components/OpportunityCard";
 import SearchBar from "../components/SearchBar";
 import FilterBar from "../components/FilterBar";
-import { allOpportunities } from "../data/mockData";
+import { type Opportunity } from "../data/mockData";
+import { toOpportunity, type ApiOpportunity } from "../lib/Opportunities";
+import { api } from "../lib/api";
 
 export default function BrowseOpportunities() {
     const [search, setSearch] = useState('');
     const [skillFilter, setSkillFilter] = useState('All Skills');
+    const [opportunities, setOpportunities] = useState<Opportunity[]>([]);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState<string | null>(null);
 
-    const filtered = useMemo (() => {
-        return allOpportunities.filter((opp) => {
-            const matchesSearch = opp.title.toLowerCase().includes(search.toLowerCase());
-            const matchesSkill = skillFilter === 'All Skills' || opp.skills.includes(skillFilter);
-            return matchesSearch && matchesSkill;
-        });
+    useEffect(() => {
+        let cancelled = false;
+
+        const timer = setTimeout(() => {
+            const params = new URLSearchParams();
+            if (search.trim()) params.set('q', search.trim());
+            if (skillFilter !== 'All skills') params.set('skill', skillFilter);
+            const query = params.toString();
+
+            setLoading(true);
+            setError(null);
+            api<ApiOpportunity[]>(`/opportunities${query ? `?${query}` : ''}`)
+                .then((data) => {
+                    if (!cancelled) setOpportunities(data.map(toOpportunity));
+                })
+                .catch(() => {
+                    if (!cancelled) setError('Could not load opportunities. Is the API running?');
+                })
+                .finally(() => {
+                    if (!cancelled) setLoading(false);
+                });
+        }, 300);
+
+        return () => {
+            cancelled = true;
+            clearTimeout(timer);
+        };
     }, [search, skillFilter]);
 
     return (
@@ -31,14 +57,20 @@ export default function BrowseOpportunities() {
                     <FilterBar selected={skillFilter} onChange={setSkillFilter} />
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                    {filtered.map((opp) => (
-                        <OpportunityCard key={opp.id} opportunity={opp} />
-                    ))}
-                </div>
+                {error && <p className="text-sm text-error mb-4">{error}</p>}
+                {loading && <p className="text-sm text-muted">Loading...</p>}
 
-                {filtered.length === 0 && (
-                    <p className="text-sm text-muted text-center mt-12">No opportunities match your search.</p>
+                {!loading && !error && (
+                    <>
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                            {opportunities.map((opp) => (
+                                <OpportunityCard key={opp.id} opportunity={opp} />
+                            ))}
+                        </div>
+                        {opportunities.length === 0 && (
+                            <p className="text-sm text-muted text-center mt-12">No opportunities match your search</p>
+                        )}
+                    </>
                 )}
             </main>
         </div>

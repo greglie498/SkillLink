@@ -7,7 +7,7 @@ export default function OpportunityCard({ opportunity }: {opportunity: Opportuni
         <div className='bg-white border-border rounded-card p-6 shadow-sm hover:shadow-md transition-shadow'>
             <div className="flex justify-between items-start mb-2">
                 <h3 className="text-lg font-semibold text-ink">{opportunity.title}</h3>
-                <MatchBadge score={opportunity.matchScore} />
+                {opportunity.matchScore !== undefined && <MatchBadge score={opportunity.matchScore} />}
             </div>
             <p className="text-sm text-muted mb-3">{opportunity.business}</p>
             <div className="flex flex-wrap gap-2 mb-4">

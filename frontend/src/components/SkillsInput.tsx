@@ -1,32 +1,50 @@
 import { useState, type KeyboardEvent } from "react";
 
-interface SkillsInputProps {
-    skills: string[];
-    onChange: (skills: string[]) => void;
+export interface ProfileSkill {
+    skillId: string;
+    name: string;
+    proficiency: string;
 }
 
-export default function SkillsInput({ skills, onChange}: SkillsInputProps) {
+interface SkillsInputProps {
+    skills: ProfileSkill[];
+    catalogue: string[];
+    onAdd: (name: string) => Promise<string | null>;
+    onRemove: (skillId: string) => Promise<void>;
+}
+
+export default function SkillsInput({ skills, catalogue, onAdd, onRemove}: SkillsInputProps) {
     const [input, setInput] = useState('');
     const [error, setError] = useState<string | null>(null);
+    const [busy, setBusy] = useState(false);
 
-    function addSkill() {
+    const available = catalogue.filter(
+        (name) => !skills.some((s) => s.name.toLowerCase() === name.toLowerCase())
+    );
+
+    async function addSkill() {
         const trimmed = input.trim();
         if (!trimmed) {
             setError('Enter a skill before adding.');
             return;
         }
-        if (skills.some((s) => s.toLowerCase() === trimmed.toLowerCase())) {
+        if (skills.some((s) => s.name.toLowerCase() === trimmed.toLowerCase())) {
             setError('That skill is already added.');
             return;
         }
-        onChange([...skills, trimmed]);
-        setInput('');
-        setError(null);
+        
+        setBusy(true);
+        const serverError = await onAdd(trimmed);
+        setBusy(false);
+
+        if (serverError) {
+            setError(serverError);
+        } else {
+            setInput('');
+            setError(null);
+        }
     }
 
-    function removeSkill(skillToRemove: string) {
-        onChange(skills.filter((s) => s !== skillToRemove));
-    }
 
     function handleKeyDown(e: KeyboardEvent<HTMLInputElement>) {
         if (e.key === 'Enter') {
@@ -39,16 +57,16 @@ export default function SkillsInput({ skills, onChange}: SkillsInputProps) {
         <div className="md-4">
             <label className="block text-sm font-medium text-ink mb-1">Skills</label>
 
-            <div className="flex felx-wrap gap-2 mb-2">
+            <div className="flex flex-wrap gap-2 mb-2">
                 {skills.map((skill) => (
                     <span
-                        key={skill}
+                        key={skill.skillId}
                         className="inline-flex items-center gap-1.5 text-xs bg-surface border border-border rounded-full px-3 py-1.5 text-ink"
                     >
-                        {skill}
+                        {skill.name}
                         <button
                             type="button"
-                            onClick={() => removeSkill(skill)}
+                            onClick={() => onRemove(skill.skillId)}
                             className="text-muted hover:text-error font-bold leading-none"
                             aria-label={`Remove ${skill}`}
                         >
@@ -64,17 +82,24 @@ export default function SkillsInput({ skills, onChange}: SkillsInputProps) {
             <div className="flex gap-2">
                 <input
                     type="text"
+                    list="skill-catalogue"
                     value={input}
                     onChange={(e) => { setInput(e.target.value); setError(null); }}
                     onKeyDown={handleKeyDown}
-                    placeholder="e.g. Node.js"
+                    placeholder="Pick or type a skill"
                     className={`flex-1 border rounded-md px-3 py-1.5 text-sm text-ink
                         focus:outline-none focus:ring-2 focus:ring-primary/40
                         ${error ? 'border-error' : 'border-border focus:border-primary'}`}
                 />
+                <datalist id="skill-catalogue">
+                    {available.map((name) => (
+                        <option key={name} value={name} />
+                    ))}
+                </datalist>
                 <button
                     type="button"
                     onClick={addSkill}
+                    disabled={busy}
                     className="bg-primary hover:bg-primary-dark text-white text-sm font-medium px-4 py-1.5 rounded-md transition-colors"
                 >
                     Add

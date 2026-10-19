@@ -2,11 +2,12 @@ export interface Opportunity {
     id: string;
     title: string;
     business: string;
-    matchScore: number;
+    matchScore?: number;
     skills: string[];
     budget: string;
     duration: string;
     deadline: string;
+    description?: string;
 }
 
 export interface TalentProfile {

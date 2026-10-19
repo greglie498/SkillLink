@@ -2,9 +2,20 @@ import Sidebar from "../components/Sidebar";
 import OpportunityCard from "../components/OpportunityCard";
 import ProfileCompletionCard from "../components/ProfileCompletionCard";
 import ApplicationsList from "../components/ApplicationsList";
-import { recommendedOpportunities, profileCompletion } from "../data/mockData";
+import { profileCompletion, type Opportunity } from "../data/mockData";
+import { toOpportunity, type ApiOpportunity } from "../lib/Opportunities";
+import { useState, useEffect } from "react";
+import { api } from "../lib/api";
 
 export default function TalentDashboard() {
+    const [latest, setLatest] = useState<Opportunity[]>([]);
+
+    useEffect(() => {
+        api<ApiOpportunity[]>('/opportunities')
+            .then((data: any[]) => setLatest(data.slice(0, 3).map(toOpportunity)))
+            .catch(() => setLatest([]));
+    }, []);
+    
     return (
         <div className="flex min-h-screen bg-surface">
             <Sidebar />
@@ -20,9 +31,9 @@ export default function TalentDashboard() {
                 </div>
 
                 <section>
-                    <h2 className="text-lg font-semibold text-ink mb-4">Recommended Opportunities</h2>
+                    <h2 className="text-lg font-semibold text-ink mb-4">Latest Opportunities</h2>
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                        {recommendedOpportunities.map((opp) => (
+                        {latest.map((opp: Opportunity) => (
                             <OpportunityCard key={opp.id} opportunity={opp} />
                         ))}
                     </div>

@@ -1,4 +1,6 @@
 import { useState, type FormEvent } from "react";
+import { api, ApiError } from "../lib/api";
+import { saveSession, type AuthResponse } from "../lib/auth";
 import { Link, useNavigate } from "react-router-dom";
 import TopNav from "../components/TopNav";
 import FormField from "../components/FormField";
@@ -6,32 +8,59 @@ import { validateEmail, validatePassword, validateRequired } from "../utils/vali
 
 type Role = 'talent' | 'business';
 
+interface RegisterErrors {
+    fullName: string | null;
+    email: string | null;
+    password: string | null;
+}
+
 export default function Register() {
     const navigate = useNavigate();
     const [role, setRole] = useState<Role>('talent');
     const [fullName, setFullName] = useState('');
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
-    const [errors, setErrors] = useState<Record<string, string | null>>({});
-    const [submitted, setSubmitted] = useState(false);
-
-    function handleSubmit(e: FormEvent<HTMLFormElement>) {
+    const [errors, setErrors] = useState<Partial<RegisterErrors>>({});
+    const [formError, setFormError] = useState<string | null>(null);
+    const [loading, setLoading] = useState(false);
+    
+    async function handleSubmit(e: FormEvent<HTMLFormElement>) {
         e.preventDefault();
+        setFormError(null);
 
-        const newErrors = {
+        const newErrors: RegisterErrors = {
             fullName: validateRequired(fullName, 'Full name'),
             email: validateEmail(email),
             password: validatePassword(password),
         };
         setErrors(newErrors);
 
-        const hasErrors = Object.values(newErrors).some((err) => err !== null);
-        if (hasErrors) return;
+        if (Object.values(newErrors).some((err) => err !== null)) return;
 
-        // Pending Backend
-        console.log('Register user:', { role, fullName, email });
-        setSubmitted(true);
-        setTimeout(() => navigate('/dashboard'), 1000);
+        setLoading(true);
+        try{
+            const data = await api<AuthResponse>('/auth/register', {
+                method: 'POST',
+                body: { role: role.toUpperCase(), name: fullName.trim(), email, password },
+            });
+            saveSession(data.token, data.user);
+            navigate('/dashboard');
+        } catch (err) {
+            if (err instanceof ApiError && err.fieldErrors) {
+                setErrors ({
+                    fullName: err.fieldErrors.name ?? null,
+                    email: err.fieldErrors.email ?? null,
+                    password: err.fieldErrors.password ?? null,
+                });
+            } else if (err instanceof ApiError) {
+                setFormError (err.message);
+            } else {
+                setFormError('Could not reach the server. Please try again.')
+            }
+        } finally {
+            setLoading(false);
+        }
+
     }
 
     return (
@@ -57,7 +86,8 @@ export default function Register() {
                         </button>
                     ))}
                 </div>
-
+                
+                {formError && <p className="text-sm text-error mb-4">{formError}</p>}
                 <form onSubmit={handleSubmit} noValidate>
                     <FormField
                         label={role === 'business' ? 'Business Name' : 'Full Name'}
@@ -85,9 +115,10 @@ export default function Register() {
 
                     <button
                         type="submit"
+                        disabled={loading}
                         className="w-full bg-primary hover:bg-primary-dark text-white text-sm font-medium py-2.5 rounded-md transition-colo9rs mt-2"
                     >
-                        {submitted ? 'Account created' : 'Register'}
+                        {loading ? 'Creating account...' : 'Register'}
                     </button>
                 </form>
 

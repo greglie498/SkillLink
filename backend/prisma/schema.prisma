@@ -66,6 +66,7 @@ model User {
   businessProfile       BusinessProfile?
   notifications         Notification[]
   feedbackGiven         Feedback[]
+  auditLogs             AuditLog[]
   verificationsReviewed VerificationSubmission[]
 
   @@map("users")
@@ -293,3 +294,18 @@ model VerificationSubmission {
   @@map("verification_submissions")
 }
 
+model AuditLog {
+  id          String   @id @default(uuid()) @db.Uuid
+  actorUserId String?  @map("actor_user_id") @db.Uuid
+  action      String
+  targetType  String?  @map("target_type")
+  targetId    String?  @map("target_id")
+  metadata    Json?
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  actor User? @relation(fields: [actorUserId], references: [id], onDelete: SetNull)
+
+  @@index([actorUserId])
+  @@index([createdAt])
+  @@map("audit_logs")
+}

@@ -2,11 +2,12 @@ import { Router } from "express";
 import { z } from "zod";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
-import type { Prisma, UserRole } from "@prisma/client";
+import { Prisma, UserRole } from "@prisma/client";
 import { prisma } from "../lib/prisma";
 import { JWT_SECRET, JWT_EXPIRES_IN, BCRYPT_ROUNDS } from "../lib/config";
 import { asyncHandler } from "../lib/asyncHandler"; 
 import { formatZodErrors } from "../lib/validate";
+import { audit, auditQuietly } from "../lib/audit";
 
 const router = Router();
 
@@ -56,6 +57,7 @@ router.post(
 
         const { role, name, email, password } = parsed.data;
 
+        try {
         const existing = await prisma.user.findUnique({ where: { email } });
         if (existing) {
             return res.status(409).json({ errors: { email: 'An account with this email already exists. '} });
@@ -63,19 +65,38 @@ router.post(
 
         const passwordHash = await bcrypt.hash(password, 10);
 
-        const user = await prisma.user.create({
-            data: {
-                email, 
-                passwordHash,
-                role,
-                ...(role === 'TALENT'
-                    ? { talentProfile: { create: { fullName: name } } }
-                        : { businessProfile: { create: { organisationName: name } } })
-                    } as unknown as Prisma.UserCreateInput,
-            select: { id: true, email: true, role: true },
+        const user = await prisma.$transaction(async (tx) => {
+            const created = await tx.user.create({
+                data: {
+                    email, 
+                    passwordHash,
+                    role,
+                    ...(role === 'TALENT'
+                        ? { talentProfile: { create: { fullName: name } } }
+                            : { businessProfile: { create: { organisationName: name } } }),           
+            },
+                select: { id: true, email: true, role: true },
+            });
+
+            await audit(tx, {
+                actorUserId: created.id,
+                action: 'USER_REGISTERED',
+                targetType: 'user',
+                targetId: created.id,
+                metadata: { role },
+            });
+                   
+            return created;
         });
 
         res.status(201).json({ user, token: signToken(user.id, user.role) });
+        } catch (err) {
+            // Two simultaneous registrations with the same email: the unique constraint catches the loser
+            if (err instanceof Prisma.PrismaClientKnownRequestError && err.code == 'P2002') {
+                return res.status(409).json({ errors: { email: 'An account with this email already exists.'} });
+            }
+            throw err;
+        }
     })
 );
 
@@ -89,12 +110,38 @@ router.post(
         const { email, password } = parsed.data;
         const user = await prisma.user.findUnique({ where: { email } });
 
-        if(!user || !(await bcrypt.compare(password, user.passwordHash))) {
+        const valid = await bcrypt.compare(password,  user?.passwordHash ?? DUMMY_HASH);
+        if (!user || !valid){
+            if(user) {
+                await auditQuietly({
+                    actorUserId: user.id,
+                    action: 'LOGIN_FAILED',
+                    targetType: 'user',
+                    targetId: user.id,
+                    metadata: { reason: 'bad_password' },
+                });
+        }
             return res.status(401).json({ message: 'Invalid email or password.' });
+
         }
         if (user.status !== 'ACTIVE') {
-            return res.status(403).json({ message: 'This account is not active.'});
+            await auditQuietly({
+                actorUserId: user.id,
+                action: 'LOGIN_BLOCKED',
+                targetType: 'user',
+                targetId: user.id,
+                metadata: { status: user.status },    
+            });
+            return res.status(403).json({ message: 'This account is not active.' });
         }
+
+        await auditQuietly({
+            actorUserId: user.id,
+            action: 'LOGIN_SUCCESS',
+            targetType: 'user',
+            targetId: user.id,
+        });
+    
 
         res.json({
             user: { id: user.id, email: user.email, role: user.role },

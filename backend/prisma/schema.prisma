@@ -292,3 +292,4 @@ model VerificationSubmission {
 
   @@map("verification_submissions")
 }
+

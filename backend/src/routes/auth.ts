@@ -4,23 +4,28 @@ import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import type { Prisma, UserRole } from "@prisma/client";
 import { prisma } from "../lib/prisma";
-import { JWT_SECRET } from "../lib/config";
+import { JWT_SECRET, JWT_EXPIRES_IN, BCRYPT_ROUNDS } from "../lib/config";
 import { asyncHandler } from "../lib/asyncHandler"; 
 import { formatZodErrors } from "../lib/validate";
 
 const router = Router();
 
+// Compared against when the email doesn't exist
+const DUMMY_HASH = bcrypt.hashSync('not-a-real-password', BCRYPT_ROUNDS);
+
 const emailSchema = z
     .string()
     .trim()
     .email('Enter a valid email address.')
+    .max(254, 'Email is too long')
     .transform((v) => v.toLowerCase());
 
 const passwordSchema = z
     .string()
     .min(8, 'Password must be at least 8 characters.')
     .regex(/[A-Z]/, 'Password must include at least one uppercase letter.')
-    .regex(/[0-9]/, 'Password must include at least one number');
+    .regex(/[0-9]/, 'Password must include at least one number')
+    .refine((v) => Buffer.byteLength(v, 'utf8') <= 72, 'Password must be at most 72 characters.');
 
 const registerSchema = z.object({
     role: z.enum([ 'TALENT', 'BUSINESS']),
@@ -31,11 +36,15 @@ const registerSchema = z.object({
 
 const loginSchema = z.object({
     email: emailSchema,
-    password: z.string().min(1, 'Password is required.'),
+    password: z.string().min(1, 'Password is required.').max(128, 'Invalid email  or password'),
 });
 
 function signToken(userId: string, role: UserRole) {
-    return jwt.sign({ role }, JWT_SECRET, { subject: userId, expiresIn: '7d' });
+    return jwt.sign({ role }, JWT_SECRET, {
+        subject: userId, 
+        expiresIn: '7d',
+        algorithm: 'HS256',
+    });
 }
 
 // POST /api/auth/register

@@ -38,7 +38,10 @@ export async function api<T>(path: string, { method = 'GET', body, auth = false 
     const data = await res.json().catch(() => ({}));
 
     if (!res.ok) {
-        if (res.status === 401 && auth) clearSession();
+        if (res.status === 401 && auth) {
+            clearSession();
+            window.location.assign('/login');
+        }
         throw new ApiError(data.message ?? `Request failed (${res.status}).`, res.status, data.errors);
     }
     return data as T;

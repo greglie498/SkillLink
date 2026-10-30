@@ -35,3 +35,14 @@ export function clearSession() {
     localStorage.removeItem(TOKEN_KEY);
     localStorage.removeItem(USER_KEY);
 }
+
+export function homePathFor(role: SessionUser['role']): string {
+    switch (role) {
+        case 'TALENT':
+            return '/dashboard';
+        case 'BUSINESS':
+            return '/business';
+        case 'ADMIN':
+            return '/admin';
+    }
+}

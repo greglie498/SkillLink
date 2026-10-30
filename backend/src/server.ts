@@ -6,6 +6,8 @@ import skillsRouter from './routes/skills';
 import opportunitiesRouter from './routes/opportunities';
 import authRouter from './routes/auth';
 import talentRouter from './routes/talent';
+import businessRouter from './routes/business';
+import adminRouter from './routes/admin';
 import { authLimiter } from './middleware/rateLimit';
 import helmet from 'helmet';
 
@@ -23,11 +25,14 @@ app.use('/api/auth',  authLimiter, authRouter);
 app.use('/api/skills', skillsRouter);
 app.use('/api/opportunities', opportunitiesRouter);
 app.use ('/api/talent', talentRouter)
+app.use('/api/business', businessRouter)
+app.use('/api/admin', adminRouter)
 
 // Central error handler (must have 4 params)
 app.use((err: unknown, _req: Request, res: Response, _next: NextFunction) => {
-    if (err instanceof Prisma.PrismaClientKnownRequestError && err.code == 'P2002') {
-        return res.status(409).json({ message: 'That record already exists. '});
+    if (err instanceof Prisma.PrismaClientKnownRequestError) {
+        if (err.code === 'P2002') return res.status(409).json({ message: 'That record already exists. '});
+        if (err.code === 'P2003') return res.status(400).json({ message: 'A referenced record does not exist. '});
     }
     // Client errors from middleware (malformed JSON,  body  too large)
     const status = (err as  { status?: number})  ?.status;

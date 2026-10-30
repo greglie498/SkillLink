@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { api, ApiError } from "../lib/api";
-import { saveSession, type AuthResponse } from "../lib/auth";
+import { saveSession,homePathFor, type AuthResponse } from "../lib/auth";
 import { validateEmail, validateRequired } from "../utils/validation";
 import TopNav from "../components/TopNav";
 import FormField from "../components/FormField";
@@ -33,7 +33,7 @@ export default function Login() {
                 body: { email, password },
             });
             saveSession(data.token, data.user);
-            navigate('/dashboard');
+            navigate(homePathFor(data.user.role));
         } catch (err) {
             setFormError(
                 err instanceof ApiError ? err.message : 'Could not reach the server. Please try again.'

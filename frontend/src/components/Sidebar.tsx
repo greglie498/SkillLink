@@ -1,18 +1,24 @@
 import { Link, useLocation, useNavigate } from "react-router-dom";
-import { clearSession } from "../lib/auth";
+import { clearSession, getUser, type SessionUser } from "../lib/auth";
 
-const navItems = [
-    {label: 'Dashboard', path: '/dashboard'},
-    {label: 'Find Opportunities', path: '/Opportunities'},
-    {label: 'Applications', path: '/applications'},
-    {label: 'Projects', path: '/projects'},
-    {label: 'Notifications', path: '/notifications'},
-    {label: 'Profile', path: '/profile'},
-];
+const navByRole: Record<SessionUser['role'], {label: string; path: string}[]> = {
+    TALENT: [
+        {label: 'Dashboard', path: '/dashboard'},
+        {label: 'Find Opportunities', path: '/Opportunities'},
+        {label: 'Applications', path: '/applications'},
+        {label: 'Projects', path: '/projects'},
+        {label: 'Notifications', path: '/notifications'},
+        {label: 'Profile', path: '/profile'},
+    ],
+    BUSINESS: [{ label: 'Dashboard', path: '/business'}],
+    ADMIN: [{ label: 'Dashboard', path: '/admin'}],
+};
 
 export default function Sidebar() {
     const location = useLocation();
     const navigate = useNavigate();
+    const role = getUser()?.role ?? 'TALENT';
+    const navItems= navByRole[role];
 
     return (
         <aside className="hidden md:flex w-60 bg-slate-dark text-white flex-col py-6 px-4 min-h-screen">

@@ -1,6 +1,6 @@
 import { useState, type FormEvent } from "react";
 import { api, ApiError } from "../lib/api";
-import { saveSession, type AuthResponse } from "../lib/auth";
+import { saveSession, homePathFor, type AuthResponse } from "../lib/auth";
 import { Link, useNavigate } from "react-router-dom";
 import TopNav from "../components/TopNav";
 import FormField from "../components/FormField";
@@ -44,7 +44,7 @@ export default function Register() {
                 body: { role: role.toUpperCase(), name: fullName.trim(), email, password },
             });
             saveSession(data.token, data.user);
-            navigate('/dashboard');
+            navigate(homePathFor(data.user.role));
         } catch (err) {
             if (err instanceof ApiError && err.fieldErrors) {
                 setErrors ({

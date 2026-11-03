@@ -20,28 +20,34 @@ export default function LandingPage() {
             <TopNav />
 
             {/* Hero */}
-            <section className="max-w-4xl mx-auto text-center px-6 py-20">
-                <h1 className="text-4xl font-bold text-ink mb-4">
-                    Connecting Talent with Real Opportunities
-                </h1>
-                <p className="text-based text-muted mb-8 max-w-2xl mx-auto">
-                    SkillLink help university students and early-career professionals gain practical
-                    work experience, while giving SMEs affordable access to skilled talent for 
-                    short-term projects.
-                </p>
-                <div className="flex justify-center gap-4">
-                    <Link
-                        to="/register?role=talent"
-                        className="bg-primary hover:bg-primary-dark text-white text-sm font-medium px-6 py-3 rounded-md transition-colors"
-                    >
-                        Find Opportunities
-                    </Link>
-                    <Link
-                        to="/register?role=business"
-                        className="bg-white border border-primary text-primary hover:bg-primary/5 text-sm font-medium px-6 py-3 rounded-md transition-colors"
-                    >
-                        Hire Talent
-                    </Link>
+            <section 
+                className="relative bg-slate-dark bg-cover bg-center"
+                style={{ backgroundImage: "url('/hero.svg')" }}
+            >
+                <div className="absolute inset-0 bg-slate-dark/70" aria-hidden="true" />
+                <div className="relative max-w-4xl mx-auto text-center px-6 py-28">
+                    <h1 className="text-4xl md:text-5xl font-bold text-white mb-4">
+                        Connecting Talent with Real Opportunities
+                    </h1>
+                    <p className="text-base md:text-lg text-gray-100 mb-8 max-w-2xl mx-auto">
+                        SkillLink help university students and early-career professionals gain practical
+                        work experience, while giving SMEs affordable access to skilled talent for 
+                        short-term projects.
+                    </p>
+                    <div className="flex justify-center gap-4">
+                        <Link
+                            to="/register?role=talent"
+                            className="bg-primary hover:bg-primary-dark text-white text-sm font-medium px-6 py-3 rounded-md transition-colors"
+                        >
+                            Find Opportunities
+                        </Link>
+                        <Link
+                            to="/register?role=business"
+                            className="bg-white border border-primary text-primary hover:bg-primary/5 text-sm font-medium px-6 py-3 rounded-md transition-colors"
+                        >
+                            Hire Talent
+                        </Link>
+                    </div>
                 </div>
             </section>
 

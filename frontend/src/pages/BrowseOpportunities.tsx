@@ -4,12 +4,12 @@ import OpportunityCard from "../components/OpportunityCard";
 import SearchBar from "../components/SearchBar";
 import FilterBar from "../components/FilterBar";
 import { type Opportunity } from "../data/mockData";
-import { toOpportunity, type ApiOpportunity } from "../lib/Opportunities";
+import { toOpportunity, type ApiOpportunity } from "../lib/opportunities";
 import { api } from "../lib/api";
 
 export default function BrowseOpportunities() {
     const [search, setSearch] = useState('');
-    const [skillFilter, setSkillFilter] = useState('All Skills');
+    const [skillfilter, setSkillFilter] = useState('All Skills');
     const [opportunities, setOpportunities] = useState<Opportunity[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
@@ -20,12 +20,12 @@ export default function BrowseOpportunities() {
         const timer = setTimeout(() => {
             const params = new URLSearchParams();
             if (search.trim()) params.set('q', search.trim());
-            if (skillFilter !== 'All skills') params.set('skill', skillFilter);
+            if (skillfilter !== 'All Skills') params.set('skill', skillfilter);
             const query = params.toString();
 
             setLoading(true);
             setError(null);
-            api<ApiOpportunity[]>(`/opportunities${query ? `?${query}` : ''}`)
+            api<ApiOpportunity[]>(`/opportunities${query ? `?${query}` : ''}`, { auth: true })
                 .then((data) => {
                     if (!cancelled) setOpportunities(data.map(toOpportunity));
                 })
@@ -41,7 +41,7 @@ export default function BrowseOpportunities() {
             cancelled = true;
             clearTimeout(timer);
         };
-    }, [search, skillFilter]);
+    }, [search, skillfilter]);
 
     return (
         <div className="flex min-h-screen bg-surface">
@@ -54,7 +54,7 @@ export default function BrowseOpportunities() {
 
                 <div className="flex flex-col gap-4 mb-8">
                     <SearchBar value={search} onChange={setSearch} />
-                    <FilterBar selected={skillFilter} onChange={setSkillFilter} />
+                    <FilterBar selected={skillfilter} onChange={setSkillFilter} />
                 </div>
 
                 {error && <p className="text-sm text-error mb-4">{error}</p>}

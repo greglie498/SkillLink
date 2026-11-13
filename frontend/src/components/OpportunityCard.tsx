@@ -20,6 +20,10 @@ export default function OpportunityCard({ opportunity }: {opportunity: Opportuni
                     </span>
                 ))}
             </div>
+
+            {opportunity.matchedSkills && opportunity.matchedSkills.length > 0 && (
+                <p className='text-xs text-muted mb-3'>Matches your skills: {opportunity.matchedSkills.join(', ')}</p>
+            )}
             <div className="flex justify-between text-sm text-muted">
                 <span>{opportunity.budget}</span>
                 <span>{opportunity.duration}</span>

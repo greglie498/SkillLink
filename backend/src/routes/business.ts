@@ -1,6 +1,8 @@
 import { Router } from 'express';
 import { z } from 'zod';
-import type { OpportunityStatus } from '@prisma/client';
+import type { ApplicationStatus, OpportunityStatus } from '@prisma/client';
+import { matchSkills } from '../lib/matching';
+import { audit } from '../lib/audit';
 import { prisma } from '../lib/prisma';
 import { asyncHandler } from '../lib/asyncHandler';
 import { formatZodErrors } from '../lib/validate';
@@ -58,6 +60,28 @@ const allowedTransitions: Record<OpportunityStatus, OpportunityStatus[]> = {
     CLOSED: ['ARCHIVED'],
     ARCHIVED: [],
 };
+
+class StateConflict extends Error {}
+
+const applicationStatusSchema = z.object({ status: z.enum([ 'SHORTLISTED', 'REJECTED', 'SELECTED' ]) });
+
+const applicationTransitions: Record<ApplicationStatus,  ApplicationStatus[]> = {
+    SUBMITTED: ['SHORTLISTED', 'REJECTED'],
+    SHORTLISTED: ['SELECTED', 'REJECTED'],
+    REJECTED: [],
+    SELECTED: [],
+}
+function statusMessage(status: 'SHORTLISTED' | 'REJECTED' | 'SELECTED', title: string) {
+    switch (status) {
+        case 'SHORTLISTED':
+            return `You have been shorlisted for "${title}".`;
+        case 'REJECTED':
+            return `Your application for "${title}" was not sucessful.`;
+        case 'SELECTED':
+            return `Congratulations! You were slected for "${title}".`;
+    }
+}
+
 
 async function getBusiness(userId: string) {
     return prisma.businessProfile.findUnique({
@@ -274,6 +298,234 @@ router.patch(
             select: { id: true, title: true, status: true },
         });
         res.json(updated);
+    })
+);
+
+// GET /api/business/opportunities/:id/applications (own opportunity only)
+router.get(
+    '/opportunities/:id/applications',
+    asyncHandler(async (req: AuthedRequest, res) => {
+        const id = uuid.safeParse(req.params.id);
+        if(!id.success) return res.status(400).json({ message: 'Invalid opportunity id.'});
+
+        const business = await getBusiness(req.user!.id);
+        if (!business)  return res.status(404).json({ message: 'Profile not found.' });
+
+        const opportunity = await prisma.opportunity.findFirst({
+            where: { id: id.data, businessProfileId: business.id},
+            select: {
+                id: true,
+                title: true,
+                status: true,
+                skills: { select: {skill: {select: { name: true} } } },
+            },
+        });
+        if(!opportunity) return res.status(404).json({ message: 'Opportunity not found.'});
+
+        const required = opportunity.skills.map((s) => s.skill.name);
+
+        const applications = await prisma.application.findMany({
+            where: { opportunityId: opportunity.id },
+            orderBy: { createdAt: "asc"},
+            select: {
+                id: true,
+                status: true,
+                proposal: true,
+                createdAt: true,
+                portfolioLinks: { select: { portfolioLink: { select: { title: true, url: true} } } },
+                talentProfile: {
+                    select: {
+                        fullName: true,
+                        headline: true,
+                        location: true,
+                        availability: true,
+                        skills: { select: { proficiency: true, skill: { select: { name: true}}}}
+                    },
+                },
+            },
+        });
+
+        const rows = applications
+            .map((a) => {
+                const m = matchSkills(a.talentProfile.skills.map((s) => s.skill.name), required);
+                return {
+                    id: a.id,
+                    status: a.status,
+                    proposal: a.proposal,
+                    appliedAt: a.createdAt,
+                    talent: {
+                        name: a.talentProfile.fullName,
+                        headline: a.talentProfile.headline,
+                        location: a.talentProfile.location,
+                        availability: a.talentProfile.availability,
+                        skills: a.talentProfile.skills.map((s) => ({ name: s.skill.name, proficiency: s.proficiency })),
+                    },
+                    portfolioLinks: a.portfolioLinks.map((p) => p.portfolioLink),
+                    matchScore: m.score,
+                    matchedSkills: m.matchedSkills,
+                    missingSkills: m.missingSkills,
+                };
+            })
+            .sort((x, y) => y.matchScore - x.matchScore );
+        
+            res.json({
+                opportunity: { id: opportunity.id, title: opportunity.title, status: opportunity.status, requiredSkills: required },
+                applications: rows,
+            });
+    })
+);
+
+// PATCH /api/business/applications/:id/status body: {status}
+router.patch(
+    '/applications/:id/status',
+    asyncHandler(async (req: AuthedRequest, res) => {
+        const id =  uuid.safeParse(req.params.id)
+        if (!id.success) return res.status(400).json({ message: 'Invalid application id.'});
+
+        const body = applicationStatusSchema.safeParse(req.body);
+        if (!body.success) return res.status(400).json({ errors: formatZodErrors(body.error) });
+        const  next = body.data.status;
+
+        const business = await getBusiness(req.user!.id);
+        if(!business) return res.status(404).json({ message: 'Profile not found. ' });
+
+        // Ownership check: the application must belongto one of THIS business's  opportunities
+        const application = await prisma.application.findFirst({
+            where: { id: id.data, opportunity: { businessProfileId: business.id} },
+            select: {
+                id: true,
+                status: true,
+                opportunity: { select: { title: true} },
+                talentProfile: { select: { userId: true} },
+            },
+        });
+        if (!application) return res.status(404).json({ message: 'Application not found.'});
+
+        if (!applicationTransitions[application.status].includes(next)) {
+            return res.status(409).json({ message: `Cannot change status from ${application.status} to ${next}.`});
+        }
+
+        try {
+            const result = await prisma.$transaction(async (tx) => {
+                // Only updates if the status is still what we read: stops two simultaneous decisions
+                const changed = await tx.application.updateMany({
+                    where: { id: application.id, status: application.status },
+                    data: { status: next },
+                });
+                if (changed.count !== 1) throw new StateConflict();
+
+                let projectId: string | null = null;
+                if (next  === 'SELECTED') {
+                    const project = await tx.project.create({
+                        data: {applicationId: application.id },
+                        select: { id: true },
+                    });
+                    projectId = project.id;
+                    await audit(tx, {
+                        actorUserId: req.user!.id,
+                        action: 'PROJECT_CREATED',
+                        targetType: 'project',
+                        targetId: project.id,
+                        metadata: { applicationId: application.id},
+                    });
+                }
+
+                await tx.notification.create({
+                    data: {
+                        userId: application.talentProfile.userId,
+                        type: 'APPLICATION_STATUS',
+                        message: statusMessage(next, application.opportunity.title),
+                    },
+                });
+
+                await audit(tx, {
+                    actorUserId: req.user!.id,
+                    action: 'APPLICATION_STATUS_CHANGED',
+                    targetType: 'application',
+                    targetId: application.id,
+                    metadata: { from: application.status, to: next},
+                });
+
+                return { id: application.id, status: next, projectId };    
+            });
+
+            res.json(result);
+        } catch (err) {
+            if (err instanceof StateConflict) {
+                return res.status(409).json({ message: 'This application was already updated. Refresh and try again.' });
+            }
+            throw err;
+        }
+    })
+);
+
+// GET /api/business/report
+router.get(
+    '/report',
+    asyncHandler(async (req: AuthedRequest, res) => {
+        const business = await getBusiness(req.user!.id);
+        if (!business) return res.status(404).json({ message: 'Profile not found.' });
+
+        const today = new Date(`${new Date().toISOString().slice(0, 10)}T00:00:00Z`);
+        const soon = new Date(today.getTime() + 3 * 86_400_000);
+
+        const opportunities = await prisma.opportunity.findMany({
+        where: { businessProfileId: business.id },
+        orderBy: { createdAt: 'desc' },
+        select: {
+            id: true,
+            title: true,
+            status: true,
+            deadline: true,
+            applications: { select: { status: true } },
+        },
+        });
+
+        const oppByStatus: Record<string, number> = {};
+        const appByStatus: Record<string, number> = {};
+        const perOpportunity = [];
+        const needsAttention = [];
+
+        for (const o of opportunities) {
+        oppByStatus[o.status] = (oppByStatus[o.status] ?? 0) + 1;
+        const counts = { SUBMITTED: 0, SHORTLISTED: 0, REJECTED: 0, SELECTED: 0 };
+        for (const a of o.applications) {
+            counts[a.status] += 1;
+            appByStatus[a.status] = (appByStatus[a.status] ?? 0) + 1;
+        }
+        const applicants = o.applications.length;
+
+        perOpportunity.push({
+            id: o.id,
+            title: o.title,
+            status: o.status,
+            deadline: o.deadline.toISOString().slice(0, 10),
+            applicants,
+            submitted: counts.SUBMITTED,
+            shortlisted: counts.SHORTLISTED,
+            selected: counts.SELECTED,
+            rejected: counts.REJECTED,
+        });
+
+        const reasons: string[] = [];
+        if (o.status === 'DRAFT') reasons.push('Draft that has not been published');
+        if (o.status === 'PUBLISHED') {
+            if (applicants === 0) reasons.push('No applicants yet');
+            if (counts.SUBMITTED > 0) reasons.push(`${counts.SUBMITTED} application(s) awaiting your decision`);
+            if (o.deadline >= today && o.deadline <= soon) reasons.push('Deadline within 3 days');
+        }
+        if (reasons.length > 0) needsAttention.push({ id: o.id, title: o.title, reasons });
+        }
+
+        const appTotal = Object.values(appByStatus).reduce((a, b) => a + b, 0);
+
+        res.json({
+        verification: business.verification,
+        opportunities: { total: opportunities.length, byStatus: oppByStatus },
+        applications: { total: appTotal, byStatus: appByStatus },
+            perOpportunity,
+            needsAttention,
+        });
     })
 );
 

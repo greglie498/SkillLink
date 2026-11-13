@@ -31,6 +31,7 @@ export async function api<T>(path: string, { method = 'GET', body, auth = false 
         method,
         headers,
         body: body !== undefined ? JSON.stringify(body) : undefined,
+        cache: 'no-store',
     });
 
     if (res.status === 204) return undefined as T;
@@ -45,4 +46,22 @@ export async function api<T>(path: string, { method = 'GET', body, auth = false 
         throw new ApiError(data.message ?? `Request failed (${res.status}).`, res.status, data.errors);
     }
     return data as T;
+}
+
+export async function downloadFile(path: string, filename: string): Promise<void> {
+    const token = getToken();
+    const res = await fetch(`${BASE}${path}`, { headers: token ? { Authorization: `Bearer ${token}` } : {}});
+    if (res.status === 401) {
+        clearSession();
+        window.location.assign('/login');
+    }
+    if (!res.ok) throw new ApiError('Download failed.', res.status);
+    const url = URL.createObjectURL(await res.blob());
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
 }

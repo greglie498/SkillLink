@@ -9,7 +9,12 @@ export type AuditAction =
     | 'LOGIN_BLOCKED'
     | 'USER_SUSPENDED'
     | 'USER_REACTIVATED'
-    | 'BUSINESS_VERIFICATION_UPDATED';
+    | 'BUSINESS_VERIFICATION_UPDATED'
+    | 'APPLICATION_SUBMITTED'
+    | 'APPLICATION_SUBMITTED'
+    | 'APPLICATION_STATUS_CHANGED'
+    | 'PROJECT_CREATED'
+    | 'REPORT_EXPORTED';
 
 type Db = PrismaClient | Prisma.TransactionClient;
 

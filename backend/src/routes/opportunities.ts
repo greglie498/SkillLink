@@ -54,7 +54,7 @@ router.get(
 
 // GET /api/opportunities/:id
 router.get(
-    ':/id',
+    '/:id',
     asyncHandler(async (req, res) => {
         const id = z.string().uuid().safeParse(req.params.id);
         if (!id.success) return res.status(400).json({ message: 'Invalid opportunity is.' });

@@ -13,6 +13,8 @@ export interface ApiOpportunity {
     isRemote: boolean;
     location: string | null;
     deadline: string;
+    matchScore?: number;
+    matchedSkills?: string[];
 }
 
 export function toOpportunity(o: ApiOpportunity): Opportunity {
@@ -22,6 +24,8 @@ export function toOpportunity(o: ApiOpportunity): Opportunity {
         business: o.business,
         skills: o.skills,
         description: o.description,
+        matchScore: o.matchScore,
+        matchedSkills: o.matchedSkills,
         budget: o.compensationAmount
             ? `KES ${Number(o.compensationAmount)?.toLocaleString('en-KE')}`
             : 'Negotiable',

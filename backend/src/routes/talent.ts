@@ -1,9 +1,10 @@
 import { Router } from 'express';
-import { z } from 'zod';
+import { date, z } from 'zod';
 import { prisma } from '../lib/prisma';
 import { asyncHandler } from '../lib/asyncHandler';
 import { formatZodErrors } from '../lib/validate';
 import { requiredAuth, requiredRole, type AuthedRequest } from '../middleware/auth';
+import { matchSkills } from '../lib/matching';
 
 const router = Router();
 router.use(requiredAuth, requiredRole('TALENT'));
@@ -130,6 +131,63 @@ router.delete(
         });
 
         res.status(204).send();
+    })
+);
+
+// GET /api/talent/recommendations (open opportunities ranked by skill overlap)
+router.get(
+    '/recommendations',
+    asyncHandler(async (req: AuthedRequest, res) => {
+        const profile = await prisma.talentProfile.findUnique({
+            where: { userId: req.user!.id },
+            select: { id: true, skills: { select: { skill: { select: { name: true} } } } },
+        });
+        if(!profile) return res.status(404).json({ message: 'Profile not found.'});
+
+        const mySkills = profile.skills.map((s) => s.skill.name);
+        const today = new Date(`${new Date().toISOString().slice(0, 10)}T00:00:00Z`);
+
+        const opportunities = await prisma.opportunity.findMany({
+            where: {
+                status: 'PUBLISHED',
+                deadline: { gte: today},
+                applications: { none: { talentProfileId: profile.id } },
+            },
+            include: {
+                business: { select: { organisationName: true } },
+                category: true,
+                type: true,
+                skills: { include: { skill: true} },
+            },
+            orderBy: { createdAt: 'desc'},
+            take: 100,
+        });
+
+        const ranked = opportunities
+            .map((o) => {
+                const required = o.skills.map((s) => s.skill.name);
+                const m = matchSkills(mySkills, required);
+                return {
+                    id: o.id,
+                    title: o.title,
+                    description: o.description,
+                    business: o.business.organisationName,
+                    category: o.category.name,
+                    type: o.type.name,
+                    skills: required,
+                    compensationAmount: o.compensationAmount?.toString() ?? null,
+                    durationWeeks: o.durationWeeks,
+                    isRemote: o.isRemote,
+                    location: o.location,
+                    deadline: o.deadline.toISOString().slice(0, 10),
+                    matchScore: m.score,
+                    matchedSkills: m.matchedSkills,
+                };
+            })
+            .sort((a, b) => b.matchScore - a.matchScore)
+            .slice(0, 12);
+
+        res.json(ranked);
     })
 );
 

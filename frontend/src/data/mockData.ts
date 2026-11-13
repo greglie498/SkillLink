@@ -3,6 +3,7 @@ export interface Opportunity {
     title: string;
     business: string;
     matchScore?: number;
+    matchedSkills?: string[];
     skills: string[];
     budget: string;
     duration: string;

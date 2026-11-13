@@ -4,7 +4,9 @@ import cors from 'cors';
 import { Prisma } from '@prisma/client';
 import skillsRouter from './routes/skills';
 import opportunitiesRouter from './routes/opportunities';
+import applicationsRouter from './routes/application';
 import authRouter from './routes/auth';
+import metaRouter from './routes/meta';
 import talentRouter from './routes/talent';
 import businessRouter from './routes/business';
 import adminRouter from './routes/admin';
@@ -22,8 +24,10 @@ app.use(express.json({limit: "100kb"}));
 
 app.get('/api/health', (_req, res) => res.json({ status: 'ok' }));
 app.use('/api/auth',  authLimiter, authRouter);
+app.use('/api/meta', metaRouter);
 app.use('/api/skills', skillsRouter);
 app.use('/api/opportunities', opportunitiesRouter);
+app.use('/api/applications', applicationsRouter)
 app.use ('/api/talent', talentRouter)
 app.use('/api/business', businessRouter)
 app.use('/api/admin', adminRouter)

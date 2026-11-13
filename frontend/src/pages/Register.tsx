@@ -4,6 +4,7 @@ import { saveSession, homePathFor, type AuthResponse } from "../lib/auth";
 import { Link, useNavigate } from "react-router-dom";
 import TopNav from "../components/TopNav";
 import FormField from "../components/FormField";
+import PasswordRules from '../components/PasswordRules';
 import { validateEmail, validatePassword, validateRequired } from "../utils/validation";
 
 type Role = 'talent' | 'business';
@@ -112,6 +113,7 @@ export default function Register() {
                         error={errors.password}
                         placeholder="At least 8 characters"
                     />
+                    <PasswordRules password={password} />
 
                     <button
                         type="submit"

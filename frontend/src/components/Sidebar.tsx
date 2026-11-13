@@ -10,8 +10,16 @@ const navByRole: Record<SessionUser['role'], {label: string; path: string}[]> = 
         {label: 'Notifications', path: '/notifications'},
         {label: 'Profile', path: '/profile'},
     ],
-    BUSINESS: [{ label: 'Dashboard', path: '/business'}],
-    ADMIN: [{ label: 'Dashboard', path: '/admin'}],
+    BUSINESS: [
+        { label: 'Opportunities', path: '/business'},
+        { label: 'New Opportunity', path: '/business/opportunities/new'},
+        { label: 'Reports', path: '/business/reports'}
+    ],
+    ADMIN: [
+        { label: 'Dashboard', path: '/admin'},
+        { label: 'Users', path: '/admin/users'},
+        { label: 'Audit Log', path: '/admin/audit'},
+    ],
 };
 
 export default function Sidebar() {

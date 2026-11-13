@@ -3,8 +3,8 @@ import { z, type ZodError } from "zod";
 export function formatZodErrors(error: ZodError): Record<string, string> {
     const out: Record<string, string> ={};
     for(const issue of error.issues) {
-        const key = issue.path.join('.') || 'form';
-        if (!out[key]) out[key] = issue.message;
+            const key = issue.path.join('.') || 'form';
+            out[key] = out[key] ? `${out[key]} ${issue.message}` : issue.message;
     }
     return out;
 }

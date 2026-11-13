@@ -7,10 +7,12 @@ export function validateEmail(email: string): string | null {
 
 export function validatePassword(password: string): string | null {
     if (!password) return 'Password is required.';
-    if (password.length < 8) return 'Password must be at least 8 characters.';
-    if (password.length > 72) return 'Passworde must be at most 72 characters.';
-    if (!/[A_Z]/.test(password)) return 'Password must include at least one uppercase letter.';
-    if (!/[0-9]/.test(password)) return 'Password must include at least one number';
+    const missing: string[] = [];
+    if (password.length < 8) missing.push('at least 8 characters');
+    if (!/[A-Z]/.test(password)) missing.push('one uppercase letter');
+    if (!/[0-9]/.test(password)) missing.push('one number');
+    if (missing.length > 0) return `Password needs ${missing.join(', ')}.`;
+    if (password.length > 72) return 'Password must be at most 72 characters.';
     return null;
 }
 

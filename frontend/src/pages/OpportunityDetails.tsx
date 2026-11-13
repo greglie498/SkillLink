@@ -4,11 +4,13 @@ import MatchBadge from '../components/MatchBadge';
 import { type Opportunity } from '../data/mockData';
 import { useEffect, useState } from 'react';
 import { api, ApiError } from '../lib/api';
-import { type ApiOpportunity, toOpportunity } from '../lib/Opportunities';
+import { type ApiOpportunity, toOpportunity } from '../lib/opportunities';
+import { statusLabel, statusStyle, type ApplicationDto } from '../lib/application';
 
 export default function OpportunityDetails() {
     const { id } = useParams();
     const [opportunity, setOpportunity] = useState<Opportunity | null>(null);
+    const [application, setApplication] = useState<ApplicationDto | null>(null);
     const [loading, setLoading] = useState(true);
     const[error, setError] = useState<string | null>(null);
  
@@ -33,10 +35,20 @@ export default function OpportunityDetails() {
                 if (!cancelled) setLoading(false);
             });
 
+        api<ApplicationDto[]>('/applications', { auth: true })
+            .then((list) => {
+                if (!cancelled) setApplication(list.find((a) => a.opportunityId === id) ?? null);
+            })
+            .catch(() => {
+                /* the page still works without the application status */
+            });
+
         return () => {
             cancelled = true;
         };
     }, [id]);
+
+    const closed = opportunity ? opportunity.deadline < new Date().toISOString().slice(0, 10) : false;
 
     return (
         <div className="flex min-h-screen bg-surface">
@@ -72,15 +84,35 @@ export default function OpportunityDetails() {
                         </div>
                         <div>
                             <p className='text-muted mb-1'>Duration</p>
+                            <p className='font-semibold text-ink'>{opportunity.duration}</p>
+                        </div>
+                        <div>
+                            <p className='text-muted mb-1'>Deadline</p>
                             <p className='font-semibold text-ink'>{opportunity.deadline}</p>
                         </div>
                     </div>
 
                     <p className='text-sm text-ink mb-6'>{opportunity.description}</p>
 
-                    <button className='bg-primary hover:bg-primary-dark text-white text-sm font-medium px-6 py-2.5 rounded-md transition-colors'>
-                        Apply for this Opportunity
-                    </button>
+                    {application ? (
+                        <div className='flex items-center gap-3'>
+                            <span className={`text-xs font-medium px-2 py-1 rounded-full ${statusStyle[application.status]}`}>
+                                {statusLabel[application.status]}
+                            </span>
+                            <Link to="/application" className='text-sm text-primary font-medium'>
+                                View your applications
+                            </Link>
+                        </div>
+                    ) : closed ? (
+                        <p className='text-sm text-muted'>Application for this opportunity have closed.</p>
+                    ) : (
+                        <Link
+                            to={`/opportunities/${opportunity.id}/apply`}
+                            className='inline-block bg-primary hover:bg-primary-dark text-white text-center text-sm font-medium px-6 py-2.5 rounded-md transition-colors'
+                        >
+                            Apply for this opportunity
+                        </Link>
+                    )}
                 </div>
                )}
             </main>

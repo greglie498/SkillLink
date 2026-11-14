@@ -25,13 +25,11 @@ function SelectField({
 }) {
   return (
     <div className="mb-4">
-      <label className="block text-sm font-medium text-ink mb-1">{label}</label>
+      <label className="field-label">{label}</label>
       <select
         value={value}
         onChange={(e) => onChange(e.target.value)}
-        className={`w-full border rounded-md px-4 py-2 text-sm text-ink bg-white
-          focus:outline-none focus:ring-2 focus:ring-primary/40
-          ${error ? 'border-error' : 'border-border focus:border-primary'}`}
+        className={`field ${error ? 'field-error' : ''}`}
       >
         <option value="">Select...</option>
         {options.map((o) => (
@@ -190,14 +188,26 @@ export default function CreateOpportunity() {
                     </div>
 
                     <fieldset className="mb-4">
-                        <legend className="block text-sm font-medium text-ink mb-2">Required skills</legend>
-                        <div className="grid grid-cols-2 gap-2">
-                            {skills.map((s) => (
-                                <label key={s.id} className="flex items-center gap-2 text-sm text-ink">
-                                <input type="checkbox" checked={skillIds.includes(s.id)} onChange={() => toggleSkill(s.id)} />
-                                {s.name}
-                                </label>
-                            ))}
+                        <legend className="field-label">Required skills</legend>
+                        <div className="flex flex-wrap gap-2">
+                            {skills.map((s) => {
+                                const on = skillIds.includes(s.id);
+                                return(
+                                <button
+                                    key={s.id}
+                                    type="button"
+                                    onClick={() => toggleSkill(s.id)}
+                                    aria-pressed={on}
+                                    className={`text-xs font-medium rounded-full px-3 py-1.5 border transition-colors ${
+                                    on
+                                        ? 'bg-primary-tint text-primary-dark border-primary'
+                                        : 'bg-white text-ink border-border hover:border-primary/50'
+                                    }`}
+                                >
+                                    {s.name}
+                                </button>
+                                );
+                            })}
                         </div>
                         {errors.skillIds && <p className="text-xs text-error mt-1">{errors.skillIds}</p>}
                     </fieldset>

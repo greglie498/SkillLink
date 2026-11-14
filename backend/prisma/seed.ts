@@ -7,9 +7,61 @@ async function main() {
   const passwordHash = await bcrypt.hash('Password123', 10);
 
   // Lookup data
-  const categoryNames = ['Web Development', 'Mobile Development', 'Design', 'Content & Marketing', 'Data & Databases'];
+  const categoryNames = [
+    'Web Development', 
+    'Mobile Development', 
+    'Design', 
+    'Content & Marketing', 
+    'Data & Databases', 
+    "Agriculture & Agribusiness",
+    "Healthcare & Wellness",
+    "Legal & Compliance",
+    "Logistics & Supply Chain",
+    "Human Resources & Recruitment",
+    "Architecture & Interior Design",
+    "Environment & Sustainability",
+    "Retail & E-commerce",
+    "Manufacturing & Production",
+    "Real Estate & Property Management",
+    "Tourism & Travel Services",
+    "Personal & Lifestyle Services",
+  ];
   const typeNames = ['Project', 'Internship', 'Apprenticeship', 'Entry-Level'];
-  const skillNames = ['React', 'TypeScript', 'Node.js', 'PostgreSQL', 'Prisma', 'Tailwind CSS', 'React Native', 'Content Writing', 'Canva'];
+  const skillCategories = [
+    "Technology & IT",
+    "Business & Administration",
+    "Finance & Accounting",
+    "Marketing & Sales",
+    "Creative Design & Media",
+    "Writing & Communication",
+    "Education & Training",
+    "Engineering & Technical Services",
+    "Customer Service & Hospitality",
+    "Research & Professional Services",
+  ];
+
+  const createdSkillCategories = await Promise.all(
+    skillCategories.map((name) =>
+      (prisma as any).skillCategory.upsert({
+        where: { name },
+        update: {},
+        create: { name },
+      })
+    )
+  );
+
+  const skillCategoryId = Object.fromEntries(
+    createdSkillCategories.map((category) => [
+      category.name,
+      category.id,
+    ])
+  );
+
+  const skillNamesByCategory: Record<string, string[]> = {
+    'Technology & IT': ['React', 'TypeScript', 'Tailwind CSS', 'PostgreSQL', 'Prisma'],
+    'Writing & Communication': ['Content Writing'],
+    'Creative Design & Media': ['Canva'],
+  };
 
   const categories = await Promise.all(
     categoryNames.map((name) => prisma.category.upsert({ where: { name }, update: {}, create: { name } }))
@@ -17,13 +69,98 @@ async function main() {
   const types = await Promise.all(
     typeNames.map((name) => prisma.opportunityType.upsert({ where: { name }, update: {}, create: { name } }))
   );
+
   const skills = await Promise.all(
-    skillNames.map((name) => prisma.skill.upsert({ where: { name }, update: {}, create: { name } }))
+    Object.entries(skillNamesByCategory).flatMap(
+      ([categoryName, names]) =>
+        names.map((name) =>
+          prisma.skill.upsert({
+            where: { name },
+            update: {
+              categoryId: skillCategoryId[categoryName],
+            },
+            create: {
+              name,
+              categoryId: skillCategoryId[categoryName],
+            },
+          })
+        )
+    )
   );
 
+    const additionalSkillsByCategory = {
+    "Business & Administration": [
+      "Virtual Assistance",
+      "Business Planning",
+      "Operations Management",
+    ],
+
+    "Finance & Accounting": [
+      "Bookkeeping",
+      "Payroll Management",
+    ],
+
+    "Marketing & Sales": [
+      "Sales",
+      "Lead Generation",
+      "Market Research",
+    ],
+
+    "Creative Design & Media": [
+      "Photography",
+      "Video Editing",
+    ],
+
+    "Writing & Communication": [
+      "Translation",
+      "Proofreading",
+    ],
+
+    "Education & Training": [
+      "Tutoring",
+      "Curriculum Development",
+    ],
+
+    "Engineering & Technical Services": [
+      "CAD Design",
+      "Technical Drawing",
+    ],
+
+    "Customer Service & Hospitality": [
+      "Customer Service",
+      "Event Planning",
+    ],
+
+    "Research & Professional Services": [
+      "Recruitment",
+      "Procurement",
+    ],
+  };
+
+  
   const categoryId = Object.fromEntries(categories.map((c) => [c.name, c.id]));
   const typeId = Object.fromEntries(types.map((t) => [t.name, t.id]));
   const skillId = Object.fromEntries(skills.map((s) => [s.name, s.id]));
+
+  const additionalSkills = await Promise.all(
+    Object.entries(additionalSkillsByCategory).flatMap(
+      ([categoryName, names]) =>
+        names.map((name) =>
+          prisma.skill.upsert({
+            where: { name },
+            update: {
+              categoryId: skillCategoryId[categoryName], // Changed from categoryId
+            },
+            create: {
+              name,
+              categoryId: skillCategoryId[categoryName], // Changed from categoryId
+            },
+          })
+        )
+    )
+  );
+
+console.log(`Added ${additionalSkills.length} additional skills.`);
 
   // Admin
   await prisma.user.upsert({

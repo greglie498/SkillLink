@@ -15,4 +15,4 @@ export const httpUrl = z
     .trim()
     .max(2048, 'Link is too long.')
     .url('Enter a valid link')
-    .refine((v) => /^https?: \/\//i.test(v), 'Only http or https links are allowed');
+    .refine((v) => /^https?:\/\//i.test(v), 'Only http or https links are allowed');

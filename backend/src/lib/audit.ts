@@ -14,6 +14,8 @@ export type AuditAction =
     | 'APPLICATION_SUBMITTED'
     | 'APPLICATION_STATUS_CHANGED'
     | 'PROJECT_CREATED'
+    | 'VERIFICATION_SUBMITTED'
+    | 'OPPORTUNITY_UNPUBLISHED'
     | 'REPORT_EXPORTED';
 
 type Db = PrismaClient | Prisma.TransactionClient;

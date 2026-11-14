@@ -23,12 +23,40 @@ export interface PendingBusiness {
 }
 
 export interface AdminUser {
+    name: string;
     id: string;
     email: string;
     role: 'TALENT' | 'BUSINESS' | 'ADMIN';
     status: 'ACTIVE' | 'SUSPENDED' | 'DEACTIVATED';
     emailVerified: boolean;
     createdAt: string;
+}
+
+export interface AuditStats {
+    last24h: number;
+    failedLogin24h: number;
+    adminActions7d: number;
+}
+
+export interface AdminOpportunity {
+    id: string;
+    title: string;
+    business: string;
+    category: string;
+    type: string;
+    status: 'DRAFT' | 'PUBLISHED' | 'CLOSED' | 'ARCHIVED';
+    deadline: string;
+    applicants: number;
+    createdAt: string;
+}
+
+export interface AnalyticsData {
+    newUsers: { last30Days: number; byRole: Tally };
+    weeklySignups: { weekStart: string; talent: number; business: number }[];
+    opportunitiesByCategory: { name: string; count: number }[];
+    topSkills: { name: string; count: number }[];
+    applications: { total: number; byStatus: Tally };
+    generatedAt: string;
 }
 
 export interface AuditRow {

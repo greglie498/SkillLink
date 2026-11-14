@@ -110,13 +110,16 @@ model BusinessProfile {
 }
 
 model Skill {
-  id       String  @id @default(uuid()) @db.Uuid
-  name     String  @unique
-  isActive Boolean @default(true) @map("is_active")
+  id         String  @id @default(uuid()) @db.Uuid
+  categoryId String  @map("category_id") @db.Uuid
+  name       String  @unique
+  isActive   Boolean @default(true) @map("is_active")
 
+  category          SkillCategory      @relation(fields: [categoryId], references: [id])
   talentSkills      TalentSkill[]
   opportunitySkills OpportunitySkill[]
 
+  @@index([categoryId])
   @@map("skills")
 }
 
@@ -130,6 +133,14 @@ model TalentSkill {
 
   @@id([talentProfileId, skillId])
   @@map("talent_skills")
+}
+
+model SkillCategory {
+  id     String  @id @default(uuid()) @db.Uuid
+  name   String  @unique
+  skills Skill[]
+
+  @@map("skill_categories")
 }
 
 model Education {

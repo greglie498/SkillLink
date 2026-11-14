@@ -20,11 +20,14 @@ const paging = {
 const listQuery = z.object({
     role: z.enum([ 'TALENT', 'BUSINESS', 'ADMIN']).optional(),
     status: z.enum([ 'ACTIVE', 'SUSPENDED', 'DEACTIVATED',]).optional(),
+    q: z.string().trim().max(100).optional(),
     ...paging,
 });
 
 const auditQuery = z.object({
     action: z.string().trim().max(50).optional(),
+    q: z.string().trim().max(100).optional(),
+    days: z.coerce.number().int().min(1).max(365).optional(),
     ...paging,
 });
 
@@ -38,22 +41,48 @@ router.get(
         const parsed = listQuery.safeParse(req.query);
         if (!parsed.success) return res.status(400).json({ errors: formatZodErrors(parsed.error) });
 
-        const { role, status,  page, pageSize }  = parsed.data;
-        const where = {...(role ?  { role  } : {}), ...(status ? { status } : {}) };
+        const { role, status, q, page, pageSize }  = parsed.data;
+        const where = {
+            ...(role ?  { role  } : {}), 
+            ...(status ? { status } : {}),
+            ...(q ? { email: { contains: q, mode: 'insensitive' as const} } : {}),
+        };
 
-        const [total, users] =  await Promise.all([
+        const [total, rows] =  await Promise.all([
             prisma.user.count({ where }),
             prisma.user.findMany({
                 where,
                 // Explicit select: passwordHash  is never returned
-                select: { id: true, email: true, role: true, status: true, emailVerified: true, createdAt: true },
+                select: { 
+                    id: true, 
+                    email: true, 
+                    role: true, 
+                    status: true, 
+                    emailVerified: true, 
+                    createdAt: true, 
+                    talentProfile: { select: { fullName: true} },
+                    businessProfile: { select: { organisationName: true } },
+                },
                 orderBy: { createdAt: 'desc' },
                 skip: (page - 1) * pageSize,
                 take: pageSize, 
             }),
         ]);
 
-        res.json({ total, page, pageSize,  users });
+        res.json({ 
+            total, 
+            page, 
+            pageSize,  
+            users: rows.map((u) => ({
+                id: u.id,
+                email: u.email,
+                role: u.role,
+                status: u.status,
+                emailVerified: u.emailVerified,
+                createdAt: u.createdAt,
+                name: u.talentProfile?.fullName ?? u.businessProfile?.organisationName ?? null, 
+            }))
+        });
     })
 );
 
@@ -141,17 +170,32 @@ router.patch(
     })
 );
 
+const ADMIN_ACTIONS =[
+    'USER_SUSPENDED',
+    'USER_REACTIVATED',
+    'BUSINESS_VERIFICATION_UPDATED',
+    "OPPORTUNITY_UNPUBLISHED",
+    'REPORT_EXPORTED',
+]
+
 // GET /api/admin/audit-logs?action=&page=&pageSize=
 router.get(
     '/audit-logs',
-    asyncHandler(async (requiredAuth, res) => {
-        const parsed =  auditQuery.safeParse(requiredAuth.query);
+    asyncHandler(async (req, res) => {
+        const parsed =  auditQuery.safeParse(req.query);
         if (!parsed.success) return res.status(400).json({ errors: formatZodErrors(parsed.error) });
 
-        const { action, page, pageSize } = parsed.data;
-        const where = action ? { action } : {};
+        const { action, q, days, page, pageSize } = parsed.data;
+        const now = Date.now();
+        const where = {
+            ...(action ? { action } : {}),
+            ...(q ? { actor: { email: { contains: q, mode: 'insensitive' as const } } } : {}),
+            ...(days ? { createdAt: { gte: new Date(now - days * 86_400_000) } } : {}),
+        };
+        const day = new Date(now - 86_400_000);
+        const week = new Date(now - 7 * 86_400_000);
 
-        const [total,  logs] = await Promise.all([
+        const [total,  logs, last24h, failedLogins24h, adminActions7d] = await Promise.all([
             prisma.auditLog.count({ where }),
             prisma.auditLog.findMany({
                 where,
@@ -160,12 +204,16 @@ router.get(
                 skip: (page - 1)  * pageSize,
                 take: pageSize,
             }),
+            prisma.auditLog.count({ where: { createdAt: { gte: day } } }),
+            prisma.auditLog.count({ where: { action: 'LOGIN_FAILED', createdAt: { gte: day } } }),
+            prisma.auditLog.count({ where: { action: { in: ADMIN_ACTIONS }, createdAt: { gte: week } } }),
         ]);
 
         res.json({
             total,
             page,
             pageSize,
+            stats: { last24h, failedLogins24h, adminActions7d},
             logs: logs.map((l) => ({
                 id: l.id,
                 action: l.action,
@@ -258,16 +306,19 @@ router.get(
         });
         
         res.json(
-            rows.map((b) => ({
-                id: b.id,
-                name: b.organisationName,
-                industry: b.industry,
-                location: b.location,
-                verification: b.verification,
-                email: b.user.email,
-                documentUrl: b.verificationSubmissions[0].documentUrl ?? null,
-                submittedAt: b.verificationSubmissions[0].createdAt ?? null,
-            }))
+            rows.map((b) => {
+                const latestSubmission = b.verificationSubmissions[0];
+                return {
+                    id: b.id,
+                    name: b.organisationName,
+                    industry: b.industry,
+                    location: b.location,
+                    verification: b.verification,
+                    email: b.user?.email ?? null,
+                    documentUrl: latestSubmission?.documentUrl ?? null,
+                    submittedAt: latestSubmission?.createdAt ?? null,
+                };
+            })
         );
     })
 );
@@ -369,6 +420,210 @@ router.get(
         res.setHeader('Content-Type', 'text/csv; charset=utf-8');
         res.setHeader('Content-Disposition', 'attachment; filenmae="skilllink-${type}-${stamp}.csv"');
         res.send('\uFEFF' + csv);
+    })
+);
+
+class StateConflict extends Error {}
+
+const DAY = 86_400_000;
+
+const oppListQuery = z.object({
+  status: z.enum(['DRAFT', 'PUBLISHED', 'CLOSED', 'ARCHIVED']).optional(),
+  q: z.string().trim().max(100).optional(),
+  ...paging,
+});
+
+const unpublishSchema = z.object({
+  status: z.literal('ARCHIVED'),
+  reason: z
+    .string()
+    .trim()
+    .min(5, 'Give a reason of at least 5 characters.')
+    .max(300, 'Reason must be no more than 300 characters.'),
+});
+
+// GET /api/admin/opportunities?status=&q=&page=&pageSize=
+router.get(
+  '/opportunities',
+  asyncHandler(async (req, res) => {
+    const parsed = oppListQuery.safeParse(req.query);
+    if (!parsed.success) return res.status(400).json({ errors: formatZodErrors(parsed.error) });
+
+    const { status, q, page, pageSize } = parsed.data;
+    const where = {
+      ...(status ? { status } : {}),
+      ...(q
+        ? {
+            OR: [
+              { title: { contains: q, mode: 'insensitive' as const } },
+              { business: { organisationName: { contains: q, mode: 'insensitive' as const } } },
+            ],
+          }
+        : {}),
+    };
+
+    const [total, rows, byStatus] = await Promise.all([
+      prisma.opportunity.count({ where }),
+      prisma.opportunity.findMany({
+        where,
+        orderBy: { createdAt: 'desc' },
+        skip: (page - 1) * pageSize,
+        take: pageSize,
+        select: {
+          id: true,
+          title: true,
+          status: true,
+          deadline: true,
+          createdAt: true,
+          business: { select: { organisationName: true } },
+          category: { select: { name: true } },
+          type: { select: { name: true } },
+          _count: { select: { applications: true } },
+        },
+      }),
+      prisma.opportunity.groupBy({ by: ['status'], _count: { _all: true } }),
+    ]);
+
+    res.json({
+      total,
+      page,
+      pageSize,
+      stats: tally(byStatus, 'status'),
+      opportunities: rows.map((o) => ({
+        id: o.id,
+        title: o.title,
+        business: o.business.organisationName,
+        category: o.category.name,
+        type: o.type.name,
+        status: o.status,
+        deadline: o.deadline.toISOString().slice(0, 10),
+        applicants: o._count.applications,
+        createdAt: o.createdAt,
+      })),
+    });
+  })
+);
+
+// PATCH /api/admin/opportunities/:id/status   body: { status: 'ARCHIVED', reason }
+router.patch(
+  '/opportunities/:id/status',
+  asyncHandler(async (req: AuthedRequest, res) => {
+    const id = uuid.safeParse(req.params.id);
+    if (!id.success) return res.status(400).json({ message: 'Invalid opportunity id.' });
+
+    const body = unpublishSchema.safeParse(req.body);
+    if (!body.success) return res.status(400).json({ errors: formatZodErrors(body.error) });
+
+    const opportunity = await prisma.opportunity.findUnique({
+      where: { id: id.data },
+      select: { id: true, title: true, status: true, business: { select: { userId: true } } },
+    });
+    if (!opportunity) return res.status(404).json({ message: 'Opportunity not found.' });
+    if (opportunity.status !== 'PUBLISHED') {
+      return res.status(409).json({ message: 'Only published opportunities can be unpublished.' });
+    }
+
+    try {
+      await prisma.$transaction(async (tx) => {
+        const changed = await tx.opportunity.updateMany({
+          where: { id: opportunity.id, status: 'PUBLISHED' },
+          data: { status: 'ARCHIVED' },
+        });
+        if (changed.count !== 1) throw new StateConflict();
+
+        await tx.notification.create({
+          data: {
+            userId: opportunity.business.userId,
+            type: 'OPPORTUNITY_UNPUBLISHED',
+            message: `Your opportunity "${opportunity.title}" was removed by an administrator. Reason: ${body.data.reason}`,
+          },
+        });
+
+        await audit(tx, {
+          actorUserId: req.user!.id,
+          action: 'OPPORTUNITY_UNPUBLISHED',
+          targetType: 'opportunity',
+          targetId: opportunity.id,
+          metadata: { reason: body.data.reason },
+        });
+      });
+    } catch (err) {
+      if (err instanceof StateConflict) {
+        return res.status(409).json({ message: 'This opportunity was already changed. Refresh and try again.' });
+      }
+      throw err;
+    }
+
+    res.json({ id: opportunity.id, status: 'ARCHIVED' });
+  })
+);
+
+// GET /api/admin/reports/analytics
+router.get(
+    '/reports/analytics',
+    asyncHandler(async (_req, res) => {
+        const now = Date.now();
+
+        const [newByRole, recentUsers, byCategory, skillDemand, appByStatus, categories] = await Promise.all([
+        prisma.user.groupBy({
+            by: ['role'],
+            where: { createdAt: { gte: new Date(now - 30 * DAY) } },
+            _count: { _all: true },
+        }),
+        prisma.user.findMany({
+            where: { createdAt: { gte: new Date(now - 56 * DAY) }, role: { in: ['TALENT', 'BUSINESS'] } },
+            select: { createdAt: true, role: true },
+        }),
+        prisma.opportunity.groupBy({
+            by: ['categoryId'],
+            where: { status: { not: 'DRAFT' } },
+            _count: { _all: true },
+        }),
+        prisma.opportunitySkill.groupBy({
+            by: ['skillId'],
+            where: { opportunity: { status: 'PUBLISHED' } },
+            _count: { _all: true },
+            orderBy: { _count: { skillId: 'desc' } },
+            take: 8,
+        }),
+        prisma.application.groupBy({ by: ['status'], _count: { _all: true } }),
+        prisma.category.findMany({ select: { id: true, name: true } }),
+        ]);
+
+        const skillRows = await prisma.skill.findMany({
+        where: { id: { in: skillDemand.map((s) => s.skillId) } },
+        select: { id: true, name: true },
+        });
+
+        // Eight weekly buckets, oldest first
+        const weeks = Array.from({ length: 8 }, (_, i) => ({
+        weekStart: new Date(now - (8 - i) * 7 * DAY).toISOString().slice(0, 10),
+        talent: 0,
+        business: 0,
+        }));
+        for (const u of recentUsers) {
+        const idx = 7 - Math.floor((now - u.createdAt.getTime()) / (7 * DAY));
+        if (idx >= 0 && idx <= 7) {
+            if (u.role === 'TALENT') weeks[idx].talent += 1;
+            else weeks[idx].business += 1;
+        }
+        }
+
+        const categoryName = Object.fromEntries(categories.map((c) => [c.id, c.name]));
+        const skillName = Object.fromEntries(skillRows.map((s) => [s.id, s.name]));
+        const newTally = tally(newByRole, 'role');
+        const appTally = tally(appByStatus, 'status');
+
+        res.json({
+        newUsers: { last30Days: sum(newTally), byRole: newTally },
+        weeklySignups: weeks,
+        opportunitiesByCategory: byCategory
+            .map((c) => ({ name: categoryName[c.categoryId] ?? 'Unknown', count: c._count._all }))
+            .sort((a, b) => b.count - a.count),
+        topSkills: skillDemand.map((s) => ({ name: skillName[s.skillId] ?? 'Unknown', count: s._count._all })),
+        applications: { total: sum(appTally), byStatus: appTally },
+        generatedAt: new Date().toISOString(),
+        });
     })
 );
 

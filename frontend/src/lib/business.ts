@@ -31,14 +31,41 @@ export interface Applicant {
     talent: {
         name: string;
         headline: string | null;
+        bio: string | null;
         location: string | null;
         availability: string | null;
-        skills: {name: string; profienciency: string }[];
+        skills: {name: string; proficiency: string }[];
+        education: { institution: string; qualification: string; startYear: number | null; endYear: number | null}[];
     };
     portfolioLinks: { title: string, url: string }[];
     matchScore: number;
     matchedSkills: string[];
     missingSkills: string[];
+}
+
+export type Verification = 'PENDING' | 'VERIFIED' | 'REJECTED';
+
+export const verificationLabel: Record<Verification, string> = {
+    PENDING: 'Awaiting verification',
+    VERIFIED: 'Verified',
+    REJECTED: 'Not verified',
+};
+
+export const verificationStyle: Record<Verification, string> = {
+    PENDING: 'bg-[#FFF6E5] text-[#A66E12] border border-[#F5DFB4]',
+    VERIFIED: 'bg-[#EAF7F0] text-[#237D50] border border-[#C7EAD7]',
+    REJECTED: 'bg-[#FDEEEE] text-[#B83A3A] border border-[#F5CCCC]',
+};
+
+export interface BusinessProfileDto {
+    id: string;
+    organisationName: string;
+    industry: string | null;
+    description: string | null;
+    contactPerson: string | null;
+    location: string | null;
+    verification: Verification;
+    submission: { documentUrl: string; status: Verification; createdAt: string } | null;
 }
 
 export interface ApplicantsResponse {

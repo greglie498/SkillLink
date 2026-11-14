@@ -5,7 +5,7 @@ import { matchSkills } from '../lib/matching';
 import { audit } from '../lib/audit';
 import { prisma } from '../lib/prisma';
 import { asyncHandler } from '../lib/asyncHandler';
-import { formatZodErrors } from '../lib/validate';
+import { formatZodErrors, httpUrl } from '../lib/validate';
 import { requiredAuth, requiredRole, type AuthedRequest } from '../middleware/auth';
 
 const router = Router();
@@ -101,7 +101,16 @@ async function validSkillIds(ids: string[]) {
 router.get(
     '/profile',
     asyncHandler(async (req: AuthedRequest, res) => {
-        const profile = await prisma.businessProfile.findUnique({ where: { userId: req.user!.id } });
+        const profile = await prisma.businessProfile.findUnique({ 
+            where: { userId: req.user!.id },
+            include: {
+                verificationSubmissions: {
+                    orderBy: { createdAt: 'desc'},
+                    take: 1,
+                    select: { documentUrl: true, status: true, createdAt: true},
+                },
+            },
+        });
         if (!profile) return res.status(404).json({ message: 'Profile not found.' });
         res.json({
             id: profile.id,
@@ -111,6 +120,7 @@ router.get(
             contactPerson: profile.contactPerson,
             location: profile.location,
             verification: profile.verification,
+            submission: profile.verificationSubmissions[0] ?? null,
         });
     })
 );
@@ -339,7 +349,9 @@ router.get(
                         headline: true,
                         location: true,
                         availability: true,
-                        skills: { select: { proficiency: true, skill: { select: { name: true}}}}
+                        bio: true,
+                        education: true,
+                        skills: { select: { proficiency: true, skill: { select: { name: true}}}},
                     },
                 },
             },
@@ -359,6 +371,8 @@ router.get(
                         location: a.talentProfile.location,
                         availability: a.talentProfile.availability,
                         skills: a.talentProfile.skills.map((s) => ({ name: s.skill.name, proficiency: s.proficiency })),
+                        bio: a.talentProfile.bio,
+                        education: a.talentProfile.education,
                     },
                     portfolioLinks: a.portfolioLinks.map((p) => p.portfolioLink),
                     matchScore: m.score,
@@ -396,7 +410,11 @@ router.patch(
                 id: true,
                 status: true,
                 opportunity: { select: { title: true} },
-                talentProfile: { select: { userId: true} },
+                talentProfile: { select: { 
+                    userId: true,
+                    bio: true,
+                    education: { select: { institution: true, qualification: true, startYear: true, endYear: true } },
+                } },
             },
         });
         if (!application) return res.status(404).json({ message: 'Application not found.'});
@@ -526,6 +544,50 @@ router.get(
             perOpportunity,
             needsAttention,
         });
+    })
+);
+
+const documentSchema = z.object({ documentUrl: httpUrl });
+
+// POST /api/business/verification   body: { documentUrl }
+router.post(
+    '/verification',
+    asyncHandler(async (req: AuthedRequest, res) => {
+        const parsed = documentSchema.safeParse(req.body);
+        if (!parsed.success) return res.status(400).json({ errors: formatZodErrors(parsed.error) });
+
+        const business = await getBusiness(req.user!.id);
+        if (!business) return res.status(404).json({ message: 'Profile not found.' });
+
+        if (business.verification === 'VERIFIED') {
+        return res.status(409).json({ message: 'Your business is already verified.' });
+        }
+        const pending = await prisma.verificationSubmission.count({
+        where: { businessProfileId: business.id, status: 'PENDING' },
+        });
+        if (pending > 0) {
+        return res.status(409).json({ message: 'You already have a document awaiting review.' });
+        }
+
+        const created = await prisma.$transaction(async (tx) => {
+        const submission = await tx.verificationSubmission.create({
+            data: { businessProfileId: business.id, documentUrl: parsed.data.documentUrl },
+            select: { documentUrl: true, status: true, createdAt: true },
+        });
+        // A rejected business goes back into the review queue
+        if (business.verification === 'REJECTED') {
+            await tx.businessProfile.update({ where: { id: business.id }, data: { verification: 'PENDING' } });
+        }
+        await audit(tx, {
+            actorUserId: req.user!.id,
+            action: 'VERIFICATION_SUBMITTED',
+            targetType: 'business_profile',
+            targetId: business.id,
+        });
+        return submission;
+        });
+
+        res.status(201).json(created);
     })
 );
 

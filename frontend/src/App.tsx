@@ -14,8 +14,12 @@ import CreateOpportunity from "./pages/CreateOpportunity";
 import OpportunityApplicants from "./pages/OpportunityApplicant";
 import AdminAuditLog from "./pages/adminAuditLog";
 import BusinessReport from "./pages/BusinessReport";
+import BusinessProfile from "./pages/BusinessProfile";
 import AdminDashboard from "./pages/AdminDashoard";
 import AdminUsers from "./pages/AdminUsers";
+import AdminVerification from './pages/AdminVerification';
+import AdminOpportunities from './pages/AdminOpportunities';
+import AdminAnalytics from './pages/AdminAnalytics';
 
 function App() {
   return (
@@ -39,11 +43,15 @@ function App() {
           <Route path="/business/opportunities/new" element={<CreateOpportunity />} />
           <Route path="/business/opportunities/:id/applicants" element={<OpportunityApplicants />} />
           <Route path="/business/reports" element={<BusinessReport />} />
+          <Route path="/business/profile" element={<BusinessProfile />} />
         </Route>
 
-        <Route  element={<RequireRole role="ADMIN"/>}>
+        <Route element={<RequireRole role="ADMIN" />}>
           <Route path="/admin" element={<AdminDashboard />} />
           <Route path="/admin/users" element={<AdminUsers />} />
+          <Route path="/admin/verification" element={<AdminVerification />} />
+          <Route path="/admin/opportunities" element={<AdminOpportunities />} />
+          <Route path="/admin/analytics" element={<AdminAnalytics />} />
           <Route path="/admin/audit" element={<AdminAuditLog />} />
         </Route>
       </Routes>

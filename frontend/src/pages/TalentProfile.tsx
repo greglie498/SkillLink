@@ -1,4 +1,4 @@
-import { useEffect, useState, type FormEvent } from 'react';
+import React, { useEffect, useState, type FormEvent } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import Sidebar from '../components/Sidebar';
 import PageHeader from '../components/PageHeader';
@@ -174,106 +174,106 @@ export default function TalentProfile() {
 
     return (
         <div className="flex min-h-screen bg-surface">
-        <Sidebar />
-        <main className="flex-1 min-w-0 p-8">
-            <PageHeader title="My Profile" sub="Keep your profile up to date to get better matches." />
+            <Sidebar />
+            <main className="flex-1 min-w-0 p-8">
+                <PageHeader title="My Profile" sub="Keep your profile up to date to get better matches." />
 
-            {loading && <p className="text-sm text-muted">Loading...</p>}
-            {loadError && <p className="text-sm text-error">{loadError}</p>}
+                {loading && <p className="text-sm text-muted">Loading...</p>}
+                {loadError && <p className="text-sm text-error">{loadError}</p>}
 
-            {profile && (
-            <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
-                <div className="space-y-6">
-                <div className={`${cardClass} text-center`}>
-                    <div className="w-20 h-20 mx-auto rounded-full bg-primary-tint border border-primary-light text-primary-dark text-2xl font-bold flex items-center justify-center">
-                    {initials}
-                    </div>
-                    <h2 className="text-lg font-bold text-slate-dark mt-4">{profile.fullName}</h2>
-                    <p className="text-sm text-muted mt-1">{profile.headline || 'Add a headline'}</p>
-                    <p className="text-xs text-muted mt-2">
-                    {[profile.location, profile.availability].filter(Boolean).join(' - ') || 'Add your location and availability'}
-                    </p>
-                </div>
-
-                <div className={cardClass}>
-                    <p className="text-[11px] uppercase tracking-[.14em] font-bold text-muted mb-3">Profile strength</p>
-                    <div className="flex justify-between text-xs mb-2">
-                    <span className="text-muted">Completion</span>
-                    <span className="font-semibold text-slate-dark">{pct}%</span>
-                    </div>
-                    <div className="h-2 bg-[#EEEEF1] rounded-full overflow-hidden mb-4">
-                    <div className="h-full bg-primary rounded-full" style={{ width: `${pct}%` }} />
-                    </div>
-                    <ul className="space-y-2">
-                    {checks.map((c) => (
-                        <li key={c.label} className="flex items-center gap-2 text-xs">
-                        <span className={`w-2 h-2 rounded-full ${c.done ? 'bg-success' : 'bg-border'}`} />
-                        <span className={c.done ? 'text-ink' : 'text-muted'}>{c.label}</span>
-                        </li>
-                    ))}
-                    </ul>
-                </div>
-
-                <div className={cardClass}>
-                    <p className="text-[11px] uppercase tracking-[.14em] font-bold text-muted mb-3">Activity</p>
-                    <div className="space-y-2 text-sm">
-                    <div className="flex justify-between">
-                        <span className="text-muted">Applications sent</span>
-                        <span className="font-semibold text-ink">{applications.length}</span>
-                    </div>
-                    <div className="flex justify-between">
-                        <span className="text-muted">Selected</span>
-                        <span className="font-semibold text-ink">{selected}</span>
-                    </div>
-                    </div>
-                    <Link to="/applications" className="inline-block mt-4 text-[13px] font-semibold text-primary-dark">
-                    View applications
-                    </Link>
-                </div>
-                </div>
-
-                <div className="xl:col-span-2 space-y-6">
-                    <form onSubmit={handleSubmit} noValidate className={`${cardClass} p-6`}>
-                        <h2 className="text-[15px] font-bold text-slate-dark mb-5">Edit profile</h2>
-                        {formError && <p className="text-sm text-error mb-4">{formError}</p>}
-
-                        <FormField
-                        label="Professional headline"
-                        value={headline}
-                        onChange={setHeadline}
-                        error={errors.headline}
-                        placeholder="e.g. Frontend Developer | React and TypeScript"
-                        />
-                        <TextAreaField label="Bio" value={bio} onChange={setBio} error={errors.bio} maxLength={300} />
-                        <FormField
-                        label="Location"
-                        value={location}
-                        onChange={setLocation}
-                        error={errors.location}
-                        placeholder="e.g. Nairobi, Kenya"
-                        />
-                        <FormField
-                        label="Availability"
-                        value={availability}
-                        onChange={setAvailability}
-                        error={errors.availability}
-                        placeholder="e.g. 10-15 hrs/week"
-                        />
-
-                        <SkillsInput skills={skills} catalogue={catalogue} onAdd={handleAddSkill} onRemove={handleRemoveSkill} />
-                        <div>
-                            <button type="submit" disabled={saving} className="btn btn-primary w-full">
-                            {saved ? 'Saved' : saving ? 'Saving...' : 'Save changes'}
-                            </button>
+                {profile && (
+                <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
+                    <div className="space-y-6">
+                    <div className={`${cardClass} text-center`}>
+                        <div className="w-20 h-20 mx-auto rounded-full bg-primary-tint border border-primary-light text-primary-dark text-2xl font-bold flex items-center justify-center">
+                            {initials}
                         </div>
-                    </form>
+                        <h2 className="text-lg font-bold text-slate-dark mt-4">{profile.fullName}</h2>
+                        <p className="text-sm text-muted mt-1">{profile.headline || 'Add a headline'}</p>
+                        <p className="text-xs text-muted mt-2">
+                        {[profile.location, profile.availability].filter(Boolean).join(' - ') || 'Add your location and availability'}
+                        </p>
+                    </div>
 
-                    <EducationSection items={education} onChange={setEducation} />
-                    <PortfolioSection items={portfolio} onChange={setPortfolio} />
+                    <div className={cardClass}>
+                        <p className="text-[11px] uppercase tracking-[.14em] font-bold text-muted mb-3">Profile strength</p>
+                        <div className="flex justify-between text-xs mb-2">
+                            <span className="text-muted">Completion</span>
+                            <span className="font-semibold text-slate-dark">{pct}%</span>
+                        </div>
+                        <div className="h-2 bg-[#EEEEF1] rounded-full overflow-hidden mb-4">
+                            <div className="h-full bg-primary rounded-full" style={{ width: `${pct}%` }} />
+                        </div>
+                        <ul className="space-y-2">
+                            {checks.map((c) => (
+                                <li key={c.label} className="flex items-center gap-2 text-xs">
+                                    <span className={`w-2 h-2 rounded-full ${c.done ? 'bg-success' : 'bg-border'}`} />
+                                    <span className={c.done ? 'text-ink' : 'text-muted'}>{c.label}</span>
+                                </li>
+                            ))}
+                        </ul>
+                    </div>
+
+                    <div className={cardClass}>
+                        <p className="text-[11px] uppercase tracking-[.14em] font-bold text-muted mb-3">Activity</p>
+                        <div className="space-y-2 text-sm">
+                            <div className="flex justify-between">
+                                <span className="text-muted">Applications sent</span>
+                                <span className="font-semibold text-ink">{applications.length}</span>
+                            </div>
+                            <div className="flex justify-between">
+                                <span className="text-muted">Selected</span>
+                                <span className="font-semibold text-ink">{selected}</span>
+                            </div>
+                        </div>
+                        <Link to="/applications" className="inline-block mt-4 text-[13px] font-semibold text-primary-dark">
+                            View applications
+                        </Link>
+                    </div>
+                    </div>
+
+                    <div className="xl:col-span-2 space-y-6">
+                        <form onSubmit={handleSubmit} noValidate className={`${cardClass} p-6`}>
+                            <h2 className="text-[15px] font-bold text-slate-dark mb-5">Edit profile</h2>
+                            {formError && <p className="text-sm text-error mb-4">{formError}</p>}
+
+                            <FormField
+                            label="Professional headline"
+                            value={headline}
+                            onChange={setHeadline}
+                            error={errors.headline}
+                            placeholder="e.g. Frontend Developer | React and TypeScript"
+                            />
+                            <TextAreaField label="Bio" value={bio} onChange={setBio} error={errors.bio} maxLength={300} />
+                            <FormField
+                            label="Location"
+                            value={location}
+                            onChange={setLocation}
+                            error={errors.location}
+                            placeholder="e.g. Nairobi, Kenya"
+                            />
+                            <FormField
+                            label="Availability"
+                            value={availability}
+                            onChange={setAvailability}
+                            error={errors.availability}
+                            placeholder="e.g. 10-15 hrs/week"
+                            />
+
+                            <SkillsInput skills={skills} catalogue={catalogue} onAdd={handleAddSkill} onRemove={handleRemoveSkill} />
+                            <div className="mt-6">
+                                <button type="submit" disabled={saving} className="btn btn-primary w-full">
+                                {saved ? 'Saved' : saving ? 'Saving...' : 'Save changes'}
+                                </button>
+                            </div>
+                        </form>
+
+                        <EducationSection items={education} onChange={setEducation} />
+                        <PortfolioSection items={portfolio} onChange={setPortfolio} />
+                    </div>
                 </div>
-            </div>
-            )}
-        </main>
+                )}
+            </main>
         </div>
     );
 }

@@ -10,9 +10,12 @@ export default {
         primary: {
           DEFAULT: '#FF6B4A',
           dark: '#E85A3A',
+          tint: '#FFF1ED',
+          light: '#FFD9CF',
         },
         slate: {
           dark: '#2D3142',
+          deep: '#1E2130',
         },
         surface: '#F7F7F9',
         border: '#E4E4E9',
@@ -23,12 +26,12 @@ export default {
         error: '#DB4C4C',
         info: '#3B82C4',
       },
-      spacing: {
-        // Tailwind's default scale is already 4px-based (1=4px, 2=8px, etc.)
-        // so multiples of 2 (2,4,6,8,12) line up with your 8px base unit.
-      },
       borderRadius: {
-        card: '12px',
+        card: '16px',
+      },
+      boxShadow: {
+        sm: '0 1px 2px rgba(30,33,48,.03), 0 8px 28px rgba(30,33,48,.05)',
+        lift: '0 2px 4px rgba(30,33,48,.04), 0 16px 40px rgba(30,33,48,.10)',
       },
     },
   },

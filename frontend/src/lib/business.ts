@@ -17,10 +17,10 @@ export const opportunityStatusLabel: Record<OpportunityStatus, string> = {
 };
 
 export const opportunityStatusStyle: Record<OpportunityStatus, string> = {
-    DRAFT: 'bg-surface text-muted',
-    PUBLISHED: 'bg-success/10 text-success',
-    CLOSED: 'bg-warning/10 text-warning',
-    ARCHIVED: 'bg-surface text-muted',
+    DRAFT: 'bg-[#FFF6E5] text-[#A66E12] border border-[#F5DFB4]',
+    PUBLISHED: 'bg-[#EAF7F0] text-[#237D50] border border-[#C7EAD7]',
+    CLOSED: 'bg-[#F2F2F5] text-[#60606B] border border-transparent',
+    ARCHIVED: 'bg-[#F2F2F5] text-[#60606B] border border-transparent',
 };
 
 export interface Applicant {

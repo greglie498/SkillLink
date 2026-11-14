@@ -15,9 +15,9 @@ const roleOptions = ['', 'TALENT', 'BUSINESS', 'ADMIN'];
 const statusOptions = ['', 'ACTIVE', 'SUSPENDED', 'DEACTIVATED'];
 
 const statusStyle: Record<AdminUser['status'], string> = {
-  ACTIVE: 'bg-success/10 text-success',
-  SUSPENDED: 'bg-error/10 text-error',
-  DEACTIVATED: 'bg-surface text-muted',
+  ACTIVE: 'bg-[#EAF7F0] text-[#237D50] border border-[#C7EAD7]',
+  SUSPENDED: 'bg-[#FDEEEE] text-[#B83A3A] border border-[#F5CCCC]',
+  DEACTIVATED: 'bg-[#F2F2F5] text-[#60606B] border border-transparent',
 };
 
 export default function AdminUsers() {

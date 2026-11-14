@@ -3,6 +3,57 @@
 @tailwind components;
 @tailwind utilities;
 
-body {
-  @apply font-sans bg-white text-ink;
+@layer base {
+  body {
+    @apply font-sans bg-white text-ink antialiased;
+  }
+  h1,
+  h2,
+  h3 {
+    @apply tracking-tight;
+  }
+}
+
+@layer components {
+  .btn {
+    @apply inline-flex items-center justify-center rounded-lg border font-semibold text-sm px-5 py-2.5 transition-all disabled:opacity-60 disabled:cursor-not-allowed;
+  }
+  .btn-sm {
+    @apply px-3.5 py-2 text-xs;
+  }
+  .btn-lg {
+    @apply px-6 py-3.5;
+  }
+  .btn-primary {
+    @apply bg-primary border-primary text-white hover:bg-primary-dark;
+    box-shadow: 0 6px 18px rgba(255, 107, 74, 0.2);
+  }
+  .btn-secondary {
+    @apply bg-white border-border text-slate-dark hover:border-primary hover:text-primary-dark;
+  }
+  .btn-ghost {
+    @apply bg-transparent border-transparent text-[#60606B] hover:bg-primary-tint;
+  }
+  .btn-danger {
+    @apply bg-white border-[#F3CACA] text-error hover:bg-[#FFF5F5];
+  }
+
+  .field {
+    @apply w-full rounded-lg border border-border bg-white px-4 py-2.5 text-sm text-ink transition-colors placeholder:text-muted/70;
+  }
+  .field:focus {
+    outline: none;
+    border-color: #ff6b4a;
+    box-shadow: 0 0 0 3px rgba(255, 107, 74, 0.15);
+  }
+  .field-error,
+  .field-error:focus {
+    border-color: #db4c4c;
+  }
+  .field-error:focus {
+    box-shadow: 0 0 0 3px rgba(219, 76, 76, 0.15);
+  }
+  .field-label {
+    @apply block text-sm font-semibold text-ink mb-1.5;
+  }
 }

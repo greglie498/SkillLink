@@ -17,6 +17,21 @@ export interface ApiOpportunity {
     matchedSkills?: string[];
 }
 
+export interface MatchDto {
+    score:  number;
+    matchedSkills: string[];
+    missingSkills: string[];
+}
+
+export function formatBudget(amount: string | null): string {
+    return amount ? `KES ${Number(amount).toLocaleString('en-KE')}` : 'Negotiable';
+}
+
+export function formatDuration(weeks: number | null): string {
+    if (!weeks) return 'Flexible';
+    return `${weeks} ${weeks === 1 ? 'week' : 'weeks'}`;
+}
+
 export function toOpportunity(o: ApiOpportunity): Opportunity {
     return {
         id: o.id,
@@ -26,12 +41,8 @@ export function toOpportunity(o: ApiOpportunity): Opportunity {
         description: o.description,
         matchScore: o.matchScore,
         matchedSkills: o.matchedSkills,
-        budget: o.compensationAmount
-            ? `KES ${Number(o.compensationAmount)?.toLocaleString('en-KE')}`
-            : 'Negotiable',
-        duration: o.durationWeeks
-            ? `${o.durationWeeks} ${o.durationWeeks === 1 ? 'week' : 'weeks'}`
-            : 'Flexible',
+        budget: formatBudget(o.compensationAmount),
+        duration: formatDuration(o.durationWeeks),
         deadline: o.deadline,
     };
 }

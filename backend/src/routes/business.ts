@@ -2,7 +2,9 @@ import { Router } from 'express';
 import { z } from 'zod';
 import type { ApplicationStatus, OpportunityStatus } from '@prisma/client';
 import { matchSkills } from '../lib/matching';
+import { talentRatings } from '../lib/feedback';
 import { audit } from '../lib/audit';
+import { businessRatings, businessReviews,  } from '../lib/feedback';
 import { prisma } from '../lib/prisma';
 import { asyncHandler } from '../lib/asyncHandler';
 import { formatZodErrors, httpUrl } from '../lib/validate';
@@ -112,6 +114,8 @@ router.get(
             },
         });
         if (!profile) return res.status(404).json({ message: 'Profile not found.' });
+
+        const [ratings, reviews] = await Promise.all([businessRatings([profile.id]), businessReviews([profile.id])]);
         res.json({
             id: profile.id,
             organisationName: profile.organisationName,
@@ -121,6 +125,8 @@ router.get(
             location: profile.location,
             verification: profile.verification,
             submission: profile.verificationSubmissions[0] ?? null,
+            rating: ratings.get(profile.id) ?? null,
+            reviews,
         });
     })
 );
@@ -345,17 +351,21 @@ router.get(
                 portfolioLinks: { select: { portfolioLink: { select: { title: true, url: true} } } },
                 talentProfile: {
                     select: {
+                        id: true,
                         fullName: true,
                         headline: true,
                         location: true,
                         availability: true,
                         bio: true,
                         education: true,
-                        skills: { select: { proficiency: true, skill: { select: { name: true}}}},
+                        skills: { select: { proficiency: true, skill: { select: { name: true, id: true}}}},
                     },
                 },
+                project: { select: { id: true } },
             },
         });
+
+        const ratings = await talentRatings(applications.map((a) => a.talentProfile.id));
 
         const rows = applications
             .map((a) => {
@@ -374,14 +384,16 @@ router.get(
                         bio: a.talentProfile.bio,
                         education: a.talentProfile.education,
                     },
+                    projectId: a.project?.id ?? null,
                     portfolioLinks: a.portfolioLinks.map((p) => p.portfolioLink),
                     matchScore: m.score,
+                    rating: ratings.get(a.talentProfile.id) ?? null,
                     matchedSkills: m.matchedSkills,
                     missingSkills: m.missingSkills,
                 };
             })
             .sort((x, y) => y.matchScore - x.matchScore );
-        
+            
             res.json({
                 opportunity: { id: opportunity.id, title: opportunity.title, status: opportunity.status, requiredSkills: required },
                 applications: rows,
@@ -453,6 +465,7 @@ router.patch(
                         userId: application.talentProfile.userId,
                         type: 'APPLICATION_STATUS',
                         message: statusMessage(next, application.opportunity.title),
+                        link: projectId ? `/projects/${projectId}` : '/applications',
                     },
                 });
 

@@ -5,6 +5,7 @@ import MatchBadge from '../components/MatchBadge';
 import { api, ApiError } from '../lib/api';
 import { formatBudget, formatDuration, type ApiOpportunity, type MatchDto } from '../lib/opportunities';
 import { statusLabel, statusStyle, type ApplicationDto } from '../lib/application';
+import RatingBadge from '../components/RatingBadge';
 
 const card = 'bg-white border border-[#E8E8ED] rounded-card shadow-sm';
 const pill = 'text-xs border border-border rounded-full px-2.5 py-0.5 bg-white text-[#60606B]';
@@ -85,6 +86,9 @@ export default function OpportunityDetails() {
                             {opp.business}
                             {opp.location ? ` - ${opp.location}` : ''}
                             </p>
+                            <div className='mt-2'>
+                                <RatingBadge rating={opp.businessRating} />
+                            </div>
                             <div className="flex flex-wrap gap-2 mt-3">
                             <span className={pill}>{opp.type}</span>
                             <span className={pill}>{opp.isRemote ? 'Remote' : 'On-site'}</span>

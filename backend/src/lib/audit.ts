@@ -2,20 +2,23 @@ import type { Prisma, PrismaClient } from "@prisma/client";
 import { prisma } from  './prisma';
 
 // Admin actions (e.g. USER_SUSPENDED)
-export type AuditAction = 
-    |'USER_REGISTERED' 
-    | 'LOGIN_SUCCESS' 
-    | 'LOGIN_FAILED' 
+export type AuditAction =
+    | 'USER_REGISTERED'
+    | 'LOGIN_SUCCESS'
+    | 'LOGIN_FAILED'
     | 'LOGIN_BLOCKED'
     | 'USER_SUSPENDED'
     | 'USER_REACTIVATED'
     | 'BUSINESS_VERIFICATION_UPDATED'
-    | 'APPLICATION_SUBMITTED'
+    | 'VERIFICATION_SUBMITTED'
     | 'APPLICATION_SUBMITTED'
     | 'APPLICATION_STATUS_CHANGED'
     | 'PROJECT_CREATED'
-    | 'VERIFICATION_SUBMITTED'
+    | 'PROJECT_STATUS_CHANGED'
     | 'OPPORTUNITY_UNPUBLISHED'
+    | 'FEEDBACK_SUBMITTED'
+    | 'SKILL_CREATED'
+    | 'SKILL_UPDATED'
     | 'REPORT_EXPORTED';
 
 type Db = PrismaClient | Prisma.TransactionClient;

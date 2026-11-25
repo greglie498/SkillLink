@@ -10,6 +10,9 @@ import type { ApplicationDto } from '../lib/application';
 import PortfolioSection, { type PortfolioItem } from '../components/PortfolioSection';
 import EducationSection, { type EducationItem } from '../components/EducationSection';
 import { validateRequired, validateMaxLength } from '../utils/validation';
+import type { RatingDto } from '../components/RatingBadge';
+import type { ReviewDto } from '../components/ReviewCard';
+import ReviewsCard from '../components/ReviewCard';
 
 interface ProfileDto {
     fullName: string;
@@ -20,6 +23,8 @@ interface ProfileDto {
     skills: ProfileSkill[];
     education: EducationItem[];
     portfolioLinks: PortfolioItem[];
+    rating: RatingDto | null;
+    reviews:  ReviewDto[];
 }
 
 interface ProfileErrors {
@@ -268,8 +273,11 @@ export default function TalentProfile() {
                             </div>
                         </form>
 
+                       <div className='grid grid-cols-1 lg:grid-cols-2 gap-6 items-start'> 
                         <EducationSection items={education} onChange={setEducation} />
                         <PortfolioSection items={portfolio} onChange={setPortfolio} />
+                        </div>
+                        <ReviewsCard rating={profile.rating} reviews={profile.reviews} />
                     </div>
                 </div>
                 )}

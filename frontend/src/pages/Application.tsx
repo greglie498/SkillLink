@@ -44,7 +44,7 @@ export default function Applications() {
   return (
     <div className="flex min-h-screen bg-surface">
       <Sidebar />
-      <main className="flex-1 min-w-0 p-8 max-w-4xl">
+      <main className="flex-1 min-w-0 p-8 max-w-none">
         <PageHeader
           title="My Applications"
           sub={`${applications.length} total ${applications.length === 1 ? 'application' : 'applications'}`}
@@ -102,6 +102,11 @@ export default function Applications() {
                     <span className={`text-[11px] font-semibold px-2.5 py-0.5 rounded-full whitespace-nowrap ${statusStyle[a.status]}`}>
                       {statusLabel[a.status]}
                     </span>
+                    {a.projectId && (
+                      <Link to={`/projects/${a.projectId}`} className="btn btn-primary btn-sm">
+                        View project
+                      </Link>
+                    )}
                     <Link to={`/opportunities/${a.opportunityId}`} className="btn btn-secondary btn-sm">
                       View
                     </Link>

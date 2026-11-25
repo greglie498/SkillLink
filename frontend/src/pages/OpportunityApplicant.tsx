@@ -5,6 +5,7 @@ import MatchBadge from '../components/MatchBadge';
 import { api, ApiError } from '../lib/api';
 import { statusLabel, statusStyle } from '../lib/application';
 import type { Applicant, ApplicantsResponse } from '../lib/business';
+import RatingBadge from '../components/RatingBadge';
 
 const isSafeLink = (url: string) => /^https?:\/\//i.test(url);
 const cap = (s: string) => s.charAt(0) + s.slice(1).toLowerCase();
@@ -57,7 +58,7 @@ export default function OpportunityApplicants() {
   return (
     <div className="flex min-h-screen bg-surface">
       <Sidebar />
-      <main className="flex-1 min-w-0 p-8 max-w-4xl">
+      <main className="flex-1 min-w-0 p-8 max-w-none">
         <Link to="/business" className="text-sm text-muted hover:text-primary mb-5 inline-block">
           &larr; Back to dashboard
         </Link>
@@ -123,6 +124,9 @@ export default function OpportunityApplicants() {
                         <p className="text-xs text-muted mt-0.5">
                           {[a.talent.location, a.talent.availability].filter(Boolean).join(' - ') || 'No location or availability listed'}
                         </p>
+                      </div>
+                      <div className='mt-1'>
+                        <RatingBadge rating={a.rating} />
                       </div>
                       <div className="flex items-center gap-2">
                         <MatchBadge score={a.matchScore} />
@@ -226,6 +230,11 @@ export default function OpportunityApplicants() {
                         <button onClick={() => decide(a, 'REJECTED')} className="btn btn-danger btn-sm">
                           Reject
                         </button>
+                      )}
+                      {a.projectId && (
+                        <Link to={`/business/projects/${a.projectId}`} className="btn btn-primary btn-sm">
+                          View project
+                        </Link>
                       )}
                     </div>
                   </div>

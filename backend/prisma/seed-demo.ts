@@ -56,6 +56,10 @@ const apps: { talent: string; title: string; status: ApplicationStatus; daysAgo:
     { talent: 'brian@example.com', title: 'Customer Dashboard Prototype', status: 'SUBMITTED', daysAgo: 1 },
     { talent: 'jane@example.com', title: 'Customer Dashboard Prototype', status: 'SHORTLISTED', daysAgo: 3 },
     { talent: 'carol@example.com', title: 'Website Copywriting', status: 'SUBMITTED', daysAgo: 10 },
+    { talent: 'carol@example.com', title: 'Newsletter Setup', status: 'SELECTED', daysAgo: 30 },
+    { talent: 'david@example.com', title: 'API Integration for Booking System', status: 'SELECTED', daysAgo: 40 },
+    { talent: 'amina@example.com', title: 'Website Copywriting', status: 'SELECTED', daysAgo: 25 },
+    { talent: 'brian@example.com', title: 'Product Photography Editing', status: 'SELECTED', daysAgo: 20 },
 ];
 
 async function main() {
@@ -157,6 +161,72 @@ async function main() {
             update: {},
             create: { applicationId: application.id, status: 'IN_PROGRESS', startedAt: ago(5) },
         });
+        }
+    }
+
+    // Finished projects with feedback, so ratings show up in the demo
+    const userRows = await prisma.user.findMany({ select: { id: true, email: true } });
+    const userId = Object.fromEntries(userRows.map((u) => [u.email, u.id]));
+
+    const finished: {
+        talent: string;
+        title: string;
+        owner: string;
+        completedDaysAgo: number;
+        byBusiness?: { rating: number; comment: string };
+        byTalent?: { rating: number; comment: string };
+    }[] = [
+        {
+            talent: 'carol@example.com', title: 'Newsletter Setup', owner: QB, completedDaysAgo: 4,
+            byBusiness: { rating: 5, comment: 'Delivered early and the content was ready to send.' },
+            byTalent: { rating: 4, comment: 'Clear brief and quick feedback throughout.' },
+        },
+        {
+            // Only the business reviewed, but the 14 day window has passed, so it is visible
+            talent: 'david@example.com', title: 'API Integration for Booking System', owner: QB, completedDaysAgo: 20,
+            byBusiness: { rating: 4, comment: 'Solid work, a few small fixes were needed at review.' },
+        },
+        {
+            talent: 'amina@example.com', title: 'Website Copywriting', owner: NC, completedDaysAgo: 10,
+            byBusiness: { rating: 5, comment: 'Excellent copy that matched our brand voice.' },
+            byTalent: { rating: 5, comment: 'Friendly, organised and attentive to detail.' },
+        },
+        {
+            // Only the talent reviewed and the window is still open, so it stays hidden
+            talent: 'brian@example.com', title: 'Product Photography Editing', owner: NC, completedDaysAgo: 6,
+            byTalent: { rating: 4, comment: 'Good communication, though feedback came late.' },
+        },
+    ];
+
+    for (const f of finished) {
+        const opportunityId = oppId[f.title];
+        const talentProfileId = talentId[f.talent];
+        if (!opportunityId || !talentProfileId) continue;
+
+        const application = await prisma.application.findUnique({
+            where: { opportunityId_talentProfileId: { opportunityId, talentProfileId } },
+            select: { id: true },
+        });
+        if (!application) continue;
+
+        const project = await prisma.project.update({
+            where: { applicationId: application.id },
+            data: { status: 'COMPLETED', startedAt: ago(f.completedDaysAgo + 14), completedAt: ago(f.completedDaysAgo) },
+            select: { id: true },
+        });
+
+        const entries = [
+            f.byBusiness && { authorUserId: userId[f.owner], ...f.byBusiness },
+            f.byTalent && { authorUserId: userId[f.talent], ...f.byTalent },
+        ].filter(Boolean) as { authorUserId: string; rating: number; comment: string }[];
+
+        for (const e of entries) {
+            if (!e.authorUserId) continue;
+            await prisma.feedback.upsert({
+                where: { projectId_authorUserId: { projectId: project.id, authorUserId: e.authorUserId } },
+                update: {},
+                create: { projectId: project.id, authorUserId: e.authorUserId, rating: e.rating, comment: e.comment },
+            });
         }
     }
 

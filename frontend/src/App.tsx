@@ -12,14 +12,19 @@ import ApplyForOpportunity from "./pages/ApplyForOpportunity";
 import BusinessOpportunities from "./pages/BusinessOpportunities";
 import CreateOpportunity from "./pages/CreateOpportunity";
 import OpportunityApplicants from "./pages/OpportunityApplicant";
-import AdminAuditLog from "./pages/adminAuditLog";
+import AdminAuditLog from "./pages/AdminAuditLog";
 import BusinessReport from "./pages/BusinessReport";
 import BusinessProfile from "./pages/BusinessProfile";
 import AdminDashboard from "./pages/AdminDashoard";
 import AdminUsers from "./pages/AdminUsers";
+import Projects from './pages/Projects';
+import ProjectDetail from './pages/ProjectDetail';
+import Notifications from './pages/Notifications';
+import RequireAuth from './components/RequireAuth';
 import AdminVerification from './pages/AdminVerification';
 import AdminOpportunities from './pages/AdminOpportunities';
 import AdminAnalytics from './pages/AdminAnalytics';
+import AdminSkills from "./pages/AdminSkills";
 
 function App() {
   return (
@@ -35,6 +40,8 @@ function App() {
           <Route path="/opportunities/:id" element={<OpportunityDetails />} />
           <Route path="/applications" element={<Applications />} />
           <Route path="/opportunities/:id/apply" element={<ApplyForOpportunity />} />
+          <Route path="/projects" element={<Projects />} />
+          <Route path="/projects/:id" element={<ProjectDetail />} />
           <Route path="/profile" element={<TalentProfile />} />
         </Route>
 
@@ -43,6 +50,8 @@ function App() {
           <Route path="/business/opportunities/new" element={<CreateOpportunity />} />
           <Route path="/business/opportunities/:id/applicants" element={<OpportunityApplicants />} />
           <Route path="/business/reports" element={<BusinessReport />} />
+          <Route path="/business/projects" element={<Projects />} />
+          <Route path="/business/projects/:id" element={<ProjectDetail />} />
           <Route path="/business/profile" element={<BusinessProfile />} />
         </Route>
 
@@ -51,8 +60,13 @@ function App() {
           <Route path="/admin/users" element={<AdminUsers />} />
           <Route path="/admin/verification" element={<AdminVerification />} />
           <Route path="/admin/opportunities" element={<AdminOpportunities />} />
+          <Route path="/admin/skills" element={<AdminSkills />} />
           <Route path="/admin/analytics" element={<AdminAnalytics />} />
           <Route path="/admin/audit" element={<AdminAuditLog />} />
+        </Route>
+
+        <Route element={<RequireAuth />}>
+          <Route path="/notifications" element={<Notifications />} />
         </Route>
       </Routes>
     </BrowserRouter>

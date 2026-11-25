@@ -4,8 +4,8 @@ import Sidebar from '../components/Sidebar';
 import PageHeader from '../components/PageHeader';
 import StatCard from '../components/StatCard';
 import StatBars from '../components/StatBars';
-import { api, downloadFile } from '../lib/api';
-import { count, type AdminSummary, type AdminUser, type PendingBusiness } from '../lib/reports';
+import { api, ApiError, downloadFile } from '../lib/api';
+import { count, type AdminSummary, type AdminUser, type PendingBusiness, type PeriodReport } from '../lib/reports';
 
 const tones = {
   warning: { border: 'border-[#F2D9AC]', dot: 'bg-warning' },
@@ -49,6 +49,37 @@ export default function AdminDashboard() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
+
+  const todayStr = new Date().toISOString().slice(0, 10);
+  const [from, setFrom] = useState(new Date(Date.now() - 29 * 86_400_000).toISOString().slice(0, 10));
+  const [to, setTo] = useState(todayStr);
+  const [period, setPeriod] = useState<PeriodReport | null>(null);
+  const [periodError, setPeriodError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!from || !to) return;
+    let cancelled = false;
+    api<PeriodReport>(`/admin/reports/period?from=${from}&to=${to}`, { auth: true })
+      .then((d) => {
+        if (!cancelled) {
+          setPeriod(d);
+          setPeriodError(null);
+        }
+      })
+      .catch((err) => {
+        if (!cancelled) {
+          setPeriodError(err instanceof ApiError ? (err.fieldErrors?.from ?? err.fieldErrors?.to ?? err.message) : 'Could not load the period report.');
+        }
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [from, to]);
+
+  function preset(days: number) {
+    setTo(todayStr);
+    setFrom(new Date(Date.now() - (days - 1) * 86_400_000).toISOString().slice(0, 10));
+  }
 
   useEffect(() => {
     let cancelled = false;
@@ -134,6 +165,37 @@ export default function AdminDashboard() {
                 to="/admin/opportunities"
               />
             </div>
+
+            <section className="mb-8">
+              <div className="flex flex-wrap items-end justify-between gap-3 mb-3.5">
+                <h2 className="text-[15px] font-bold text-slate-dark">Activity in the selected period</h2>
+                <div className="flex flex-wrap items-end gap-3">
+                  {[7, 30, 90].map((d) => (
+                    <button key={d} onClick={() => preset(d)} className="btn btn-secondary btn-sm">
+                      Last {d} days
+                    </button>
+                  ))}
+                  <div>
+                    <label className="field-label">From</label>
+                    <input type="date" className="field py-2" value={from} max={to} onChange={(e) => setFrom(e.target.value)} />
+                  </div>
+                  <div>
+                    <label className="field-label">To</label>
+                    <input type="date" className="field py-2" value={to} min={from} max={todayStr} onChange={(e) => setTo(e.target.value)} />
+                  </div>
+                </div>
+              </div>
+              {periodError && <p className="text-sm text-error mb-3">{periodError}</p>}
+              {period && (
+                <div className="grid grid-cols-2 xl:grid-cols-5 gap-4">
+                  <StatCard icon="users" label="Registrations" value={period.registrations.total} hint={`${period.registrations.talent} talent, ${period.registrations.business} business`} />
+                  <StatCard icon="briefcase" label="Opportunities posted" value={period.opportunitiesPosted} hint={`${period.activeNow} active now`} />
+                  <StatCard icon="file" label="Applications" value={period.applications} />
+                  <StatCard icon="check" label="Selections" value={period.selections} hint="Of applications received in this period" />
+                  <StatCard icon="shield" label="Projects completed" value={period.completedProjects} />
+                </div>
+              )}
+            </section>
 
             <div className="grid grid-cols-2 xl:grid-cols-4 gap-4 mb-8">
               <StatCard icon="users" label="Total users" value={summary.users.total} hint={`${count(summary.users.byStatus, 'SUSPENDED')} suspended`} />

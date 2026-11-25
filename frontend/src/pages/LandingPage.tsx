@@ -102,7 +102,7 @@ export default function LandingPage() {
                             <div className="absolute left-8 right-8 bottom-8 text-white">
                                 <p className="text-xs uppercase tracking-[.16em] text-white/65 mb-2">Real work, real experience</p>
                                 <p className="text-xl font-semibold max-w-sm">
-                                Show what you can do. Hire people for what they can do.
+                                    Show what you can do. Hire people for what they can do.
                                 </p>
                         </div>
                         </div>
@@ -113,7 +113,7 @@ export default function LandingPage() {
                             </span>
                             <div className="flex justify-between items-start">
                                 <div className="w-10 h-10 rounded-xl bg-primary-tint text-primary font-bold flex items-center justify-center">
-                                FD
+                                    FD
                                 </div>
                                 <MatchBadge score={92} />
                             </div>
@@ -155,7 +155,7 @@ export default function LandingPage() {
                         <p className="text-xs font-bold uppercase tracking-[.16em] text-primary">Simple by design</p>
                         <h2 className="text-4xl tracking-tight font-bold text-slate-deep mt-3">From potential to progress</h2>
                         <p className="text-sm leading-6 text-[#777782] mt-3">
-                        A transparent, skills-first path to meaningful work, with no endless forms or opaque algorithms.
+                            A transparent, skills-first path to meaningful work, with no endless forms or opaque algorithms.
                         </p>
                     </div>
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mt-14">
@@ -210,7 +210,7 @@ export default function LandingPage() {
                         <p className="text-xs font-bold uppercase tracking-[.15em] text-[#FF9A83]">Your next step starts here</p>
                         <h2 className="text-3xl font-bold text-white tracking-tight mt-3">Ready to turn skills into momentum?</h2>
                         <p className="text-sm text-white/55 mt-2">
-                        Join a marketplace built for emerging talent and growing Kenyan businesses.
+                            Join a marketplace built for emerging talent and growing Kenyan businesses.
                         </p>
                     </div>
                     <Link to="/register" className="relative btn btn-primary btn-lg">

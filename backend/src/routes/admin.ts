@@ -142,7 +142,7 @@ router.patch(
 
         const business = await prisma.businessProfile.findUnique({
             where: { id:  id.data },
-            select: { id: true, verification: true},
+            select: { id: true, verification: true, userId: true},
         });
         if (!business) return res.status(404).json({ message:  'Business not found.'});
 
@@ -162,6 +162,17 @@ router.patch(
                 targetType: 'business_profile',
                 targetId: business.id,
                 metadata: { from: business.verification, to: body.data.verification},
+            });
+            await tx.notification.create({
+                data: {
+                userId: business.userId,
+                type: 'VERIFICATION_DECISION',
+                message:
+                    body.data.verification === 'VERIFIED'
+                    ? 'Your business has been verified. You can now publish opportunities.'
+                    : 'Your verification was not approved. You can submit a new document from your business profile.',
+                link: '/business/profile',
+                },
             });
             return b;
         });
@@ -536,6 +547,7 @@ router.patch(
             userId: opportunity.business.userId,
             type: 'OPPORTUNITY_UNPUBLISHED',
             message: `Your opportunity "${opportunity.title}" was removed by an administrator. Reason: ${body.data.reason}`,
+            link: '/business',
           },
         });
 
@@ -623,6 +635,195 @@ router.get(
         topSkills: skillDemand.map((s) => ({ name: skillName[s.skillId] ?? 'Unknown', count: s._count._all })),
         applications: { total: sum(appTally), byStatus: appTally },
         generatedAt: new Date().toISOString(),
+        });
+    })
+);
+
+const skillNameSchema = z
+    .string()
+    .trim()
+    .min(2, 'Skill name must be at least 2 characters.')
+    .max(40, 'Skill name must be no more than 40 characters.');
+
+const createSkillSchema = z.object({
+    name: skillNameSchema,
+    category: z.string().trim().min(1).default('General'),
+});
+
+const updateSkillSchema = z
+    .object({ name: skillNameSchema.optional(), isActive: z.boolean().optional() })
+    .refine((d) => d.name !== undefined || d.isActive !== undefined, { message: 'Nothing to update.', path: ['form'] });
+
+// GET /api/admin/skills   (every skill, with how often it is used)
+router.get(
+    '/skills',
+    asyncHandler(async (_req, res) => {
+        const skills = await prisma.skill.findMany({
+            orderBy: { name: 'asc' },
+            select: {
+                id: true,
+                name: true,
+                isActive: true,
+                _count: { select: { talentSkills: true, opportunitySkills: true } },
+        },
+        });
+        res.json(
+            skills.map((s) => ({
+                id: s.id,
+                name: s.name,
+                isActive: s.isActive,
+                talents: s._count.talentSkills,
+                opportunities: s._count.opportunitySkills,
+            }))
+        );
+    })
+);
+
+// POST /api/admin/skills   body: { name, category? }
+router.post(
+    '/skills',
+    asyncHandler(async (req: AuthedRequest, res) => {
+        const parsed = createSkillSchema.safeParse(req.body);
+        if (!parsed.success) return res.status(400).json({ errors: formatZodErrors(parsed.error) });
+
+        const exists = await prisma.skill.findFirst({
+        where: { name: { equals: parsed.data.name, mode: 'insensitive' } },
+        select: { id: true },
+        });
+        if (exists) return res.status(409).json({ errors: { name: 'That skill already exists.' } });
+
+        const created = await prisma.$transaction(async (tx) => {
+        const skill = await tx.skill.create({
+            data: {
+                name: parsed.data.name,
+                category: {
+                    connectOrCreate: {
+                        where: { name: parsed.data.category },
+                        create: { name: parsed.data.category },
+                    },
+                },
+            },
+            select: { id: true, name: true, isActive: true },
+        });
+        await audit(tx, {
+            actorUserId: req.user!.id,
+            action: 'SKILL_CREATED',
+            targetType: 'skill',
+            targetId: skill.id,
+            metadata: { name: skill.name },
+        });
+        return skill;
+        });
+
+        res.status(201).json(created);
+    })
+);
+
+// PATCH /api/admin/skills/:id   body: { name?, isActive? }
+// Skills are deactivated, never deleted, so existing profiles and opportunities keep working.
+router.patch(
+    '/skills/:id',
+    asyncHandler(async (req: AuthedRequest, res) => {
+        const id = uuid.safeParse(req.params.id);
+        if (!id.success) return res.status(400).json({ message: 'Invalid skill id.' });
+
+        const body = updateSkillSchema.safeParse(req.body);
+        if (!body.success) return res.status(400).json({ errors: formatZodErrors(body.error) });
+
+        const skill = await prisma.skill.findUnique({
+        where: { id: id.data },
+        select: { id: true, name: true, isActive: true },
+        });
+        if (!skill) return res.status(404).json({ message: 'Skill not found.' });
+
+        if (body.data.name && body.data.name.toLowerCase() !== skill.name.toLowerCase()) {
+        const clash = await prisma.skill.findFirst({
+            where: { name: { equals: body.data.name, mode: 'insensitive' }, NOT: { id: skill.id } },
+            select: { id: true },
+        });
+        if (clash) return res.status(409).json({ errors: { name: 'That skill already exists.' } });
+        }
+
+        const updated = await prisma.$transaction(async (tx) => {
+        const s = await tx.skill.update({
+            where: { id: skill.id },
+            data: {
+            ...(body.data.name !== undefined ? { name: body.data.name } : {}),
+            ...(body.data.isActive !== undefined ? { isActive: body.data.isActive } : {}),
+            },
+            select: { id: true, name: true, isActive: true },
+        });
+        await audit(tx, {
+            actorUserId: req.user!.id,
+            action: 'SKILL_UPDATED',
+            targetType: 'skill',
+            targetId: skill.id,
+            metadata: { from: { name: skill.name, isActive: skill.isActive }, to: { name: s.name, isActive: s.isActive } },
+        });
+        return s;
+        });
+
+        res.json(updated);
+    })
+);
+
+
+const periodQuery = z.object({
+    from: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Use the format YYYY-MM-DD.').optional(),
+    to: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Use the format YYYY-MM-DD.').optional(),
+});
+
+// GET /api/admin/reports/period?from=YYYY-MM-DD&to=YYYY-MM-DD   (default: the last 30 days)
+router.get(
+    '/reports/period',
+    asyncHandler(async (req, res) => {
+        const parsed = periodQuery.safeParse(req.query);
+        if (!parsed.success) return res.status(400).json({ errors: formatZodErrors(parsed.error) });
+
+        const today = new Date().toISOString().slice(0, 10);
+        const toStr = parsed.data.to ?? today;
+        const fromStr = parsed.data.from ?? new Date(Date.now() - 29 * DAY).toISOString().slice(0, 10);
+        const start = new Date(`${fromStr}T00:00:00.000Z`);
+        const end = new Date(`${toStr}T23:59:59.999Z`);
+
+        if (
+        Number.isNaN(start.getTime()) ||
+        Number.isNaN(end.getTime()) ||
+        start.toISOString().slice(0, 10) !== fromStr ||
+        end.toISOString().slice(0, 10) !== toStr
+        ) {
+        return res.status(400).json({ errors: { from: 'Enter valid dates.' } });
+        }
+        if (start > end) {
+        return res.status(400).json({ errors: { from: 'The start date must be on or before the end date.' } });
+        }
+        if (end.getTime() - start.getTime() > 366 * DAY) {
+        return res.status(400).json({ errors: { to: 'Choose a period of at most one year.' } });
+        }
+
+        const range = { gte: start, lte: end };
+        const [registrations, opportunitiesPosted, applications, selections, completedProjects, activeNow] = await Promise.all([
+        prisma.user.groupBy({ by: ['role'], where: { createdAt: range }, _count: { _all: true } }),
+        prisma.opportunity.count({ where: { createdAt: range, status: { not: 'DRAFT' } } }),
+        prisma.application.count({ where: { createdAt: range } }),
+        // Of the applications received in the period, how many ended up selected
+        prisma.application.count({ where: { createdAt: range, status: 'SELECTED' } }),
+        prisma.project.count({ where: { status: 'COMPLETED', completedAt: range } }),
+        prisma.opportunity.count({
+            where: { status: 'PUBLISHED', deadline: { gte: new Date(`${today}T00:00:00.000Z`) } },
+        }),
+        ]);
+
+        const reg = tally(registrations, 'role');
+        res.json({
+            from: fromStr,
+            to: toStr,
+            registrations: { total: sum(reg), talent: reg.TALENT ?? 0, business: reg.BUSINESS ?? 0 },
+            opportunitiesPosted,
+            applications,
+            selections,
+            completedProjects,
+            activeNow,
         });
     })
 );

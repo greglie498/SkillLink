@@ -145,7 +145,7 @@ export default function CreateOpportunity() {
     return (
         <div className="flex min-h-screen bg-surface">
             <Sidebar />
-            <main className="flex-1 p-8 max-w-2xl">
+            <main className="flex-1 p-8 max-w-none">
                 <Link to="/business" className="text-sm text-muted hover:text-primary mb-4 inline-block">
                 ← Back to opportunities
                 </Link>

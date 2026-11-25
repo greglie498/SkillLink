@@ -5,6 +5,7 @@ import { asyncHandler } from '../lib/asyncHandler';
 import { formatZodErrors, httpUrl } from '../lib/validate';
 import { requiredAuth, requiredRole, type AuthedRequest } from '../middleware/auth';
 import { matchSkills } from '../lib/matching';
+import { businessRatings, talentRatings, talentReviews } from '../lib/feedback';
 
 const router = Router();
 router.use(requiredAuth, requiredRole('TALENT'));
@@ -47,6 +48,7 @@ router.get(
         });
         if (!profile) return res.status(404).json({ message: 'Profile not found.' });
 
+        const [ratings, reviews] = await Promise.all([talentRatings([profile.id]), talentReviews([profile.id])]);
         res.json({
             id: profile.id,
             fullName: profile.fullName,
@@ -61,6 +63,8 @@ router.get(
             })),
             education: profile.education,
             portfolioLinks: profile.portfolioLinks,
+            rating: ratings.get(profile.id) ?? null,
+            reviews,
         });
     })
 );
@@ -154,7 +158,7 @@ router.get(
                 applications: { none: { talentProfileId: profile.id } },
             },
             include: {
-                business: { select: { organisationName: true } },
+                business: { select: {id: true, organisationName: true } },
                 category: true,
                 type: true,
                 skills: { include: { skill: true} },
@@ -163,6 +167,7 @@ router.get(
             take: 100,
         });
 
+        const ratings = await businessRatings([...new Set(opportunities.map((o) => o.business.id))]);
         const ranked = opportunities
             .map((o) => {
                 const required = o.skills.map((s) => s.skill.name);
@@ -172,6 +177,7 @@ router.get(
                     title: o.title,
                     description: o.description,
                     business: o.business.organisationName,
+                    businessRating: ratings.get(o.business.id) ?? null, 
                     category: o.category.name,
                     type: o.type.name,
                     skills: required,

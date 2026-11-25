@@ -9,6 +9,8 @@ import authRouter from './routes/auth';
 import metaRouter from './routes/meta';
 import talentRouter from './routes/talent';
 import businessRouter from './routes/business';
+import projectsRouter from './routes/project';
+import notificationsRouter from './routes/notifications';
 import adminRouter from './routes/admin';
 import { authLimiter } from './middleware/rateLimit';
 import helmet from 'helmet';
@@ -25,6 +27,8 @@ app.use(express.json({limit: "100kb"}));
 app.get('/api/health', (_req, res) => res.json({ status: 'ok' }));
 app.use('/api/auth',  authLimiter, authRouter);
 app.use('/api/meta', metaRouter);
+app.use('/api/projects', projectsRouter);
+app.use('/api/notifications', notificationsRouter)
 app.use('/api/skills', skillsRouter);
 app.use('/api/opportunities', opportunitiesRouter);
 app.use('/api/applications', applicationsRouter)

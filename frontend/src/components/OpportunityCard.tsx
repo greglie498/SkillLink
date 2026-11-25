@@ -1,6 +1,7 @@
 import { Link } from 'react-router-dom';
 import MatchBadge from './MatchBadge';
 import type { Opportunity } from '../data/mockData';
+import RatingBadge from './RatingBadge';
 
 const chip = 'text-xs bg-surface border border-border rounded-full px-2.5 py-0.5 text-ink';
 
@@ -35,6 +36,10 @@ export default function OpportunityCard({ opportunity }: { opportunity: Opportun
             {opportunity.matchedSkills && opportunity.matchedSkills.length > 0 && (
                 <p className="text-xs text-muted mt-3">Matches your skills: {opportunity.matchedSkills.join(', ')}</p>
             )}
+
+            <div className='mt-1'>
+                <RatingBadge rating={opportunity.businessRating} />
+            </div>
 
             <div className="grid grid-cols-3 gap-3 mt-4 pt-4 border-t border-[#EEEEF1] text-xs">
                 <div>

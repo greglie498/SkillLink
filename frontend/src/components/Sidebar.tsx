@@ -1,7 +1,9 @@
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import Icon, { type IconName } from './Icon';
-import { clearSession, getUser, type SessionUser } from '../lib/auth';
+import { clearSession, getToken, getUser, type SessionUser } from '../lib/auth';
 import { SkillLinkLogo } from './SkillLinkLogo';
+import { useEffect, useState } from 'react';
+import { api } from '../lib/api';
 
 interface NavItem {
   label: string;
@@ -22,7 +24,9 @@ const navByRole: Record<SessionUser['role'], NavItem[]> = {
     BUSINESS: [
         { label: 'Dashboard', path: '/business', icon: 'home' },
         { label: 'New Opportunity', path: '/business/opportunities/new', icon: 'plus' },
+        { label: 'Projects', path: '/business/projects', icon: 'briefcase' },
         { label: 'Hiring Report', path: '/business/reports', icon: 'chart' },
+        { label: 'Notifications', path: '/notifications', icon: 'bell' },
         { label: 'Business Profile', path: '/business/profile', icon: 'user' },
     ],
   ADMIN: [
@@ -30,6 +34,7 @@ const navByRole: Record<SessionUser['role'], NavItem[]> = {
         { label: 'User Management', path: '/admin/users', icon: 'users' },
         { label: 'Verification', path: '/admin/verification', icon: 'shield'},
         { label: 'Opportunities', path: '/admin/opportunities', icon: 'briefcase'},
+        { label: 'Skills Catalogue', path: '/admin/skills', icon: 'spark' },
         { label: 'Analytics', path: '/admin/analytics', icon: 'chart'},
         { label: 'Audit Log', path: '/admin/audit', icon: 'file' },
   ],
@@ -47,8 +52,25 @@ export default function Sidebar() {
     const user = getUser();
     const role = user?.role ?? 'TALENT';
     const items = navByRole[user?.role ?? 'TALENT'];
+    const [unread, setUnread] = useState(0);
 
-    // The most specific matching item is the active one
+    // Refresh the unread count whenever the user moves to another page
+    useEffect(() => {
+        if (!getToken() || role === 'ADMIN') return;
+        let cancelled = false;
+        api<{ unread: number }>('/notifications/unread-count', { auth: true })
+        .then((d) => {
+            if (!cancelled) setUnread(d.unread);
+        })
+        .catch(() => {
+            /* the badge is optional */
+        });
+        return () => {
+        cancelled = true;
+        };
+    }, [pathname, role]);
+
+  // The most specific matching item is the active one
     const current = items
         .filter((i) => !i.soon && (pathname === i.path || pathname.startsWith(i.path + '/')))
         .sort((a, b) => b.path.length - a.path.length)[0];
@@ -74,6 +96,7 @@ export default function Sidebar() {
             <nav className="space-y-1">
                 {items.map((item) => {
                     const active = item === current;
+                    const showBadge = item.path === '/notifications' && unread > 0;
                     return (
                         <Link
                         key={item.label}
@@ -85,7 +108,16 @@ export default function Sidebar() {
                         }`}
                         >
                         <Icon name={item.icon} className="w-[18px] h-[18px]" />
-                            {item.label}
+                            <span className='flex-1'>{item.label}</span>
+                            {showBadge && (
+                                <span
+                                    className={`text-[10px] font-bold rounded-full px-2 py-0.5 ${
+                                        active ? 'bg-white text-primary-dark' : 'bg-primary text-white'
+                                    }`}
+                                >
+                                    {unread}
+                                </span>
+                            )}
                         </Link>
                     );
                 })}
@@ -93,22 +125,22 @@ export default function Sidebar() {
 
             <div className="mt-auto pt-4 border-t border-white/10">
                 <div className="flex items-center gap-3 px-3 mb-3">
-                <div className="w-9 h-9 rounded-full bg-primary-tint ring-2 ring-white/10 text-primary-dark flex items-center justify-center text-sm font-bold uppercase shrink-0">
-                    {user?.email?.[0] ?? 'U'}
-                </div>
-                <div className="min-w-0">
-                    <p className="text-xs font-semibold truncate">{user?.email}</p>
-                    <p className="text-[10px] text-white/40 capitalize">{user?.role.toLowerCase()}</p>
-                </div>
+                    <div className="w-9 h-9 rounded-full bg-primary-tint ring-2 ring-white/10 text-primary-dark flex items-center justify-center text-sm font-bold uppercase shrink-0">
+                        {user?.email?.[0] ?? 'U'}
+                    </div>
+                    <div className="min-w-0">
+                        <p className="text-xs font-semibold truncate">{user?.email}</p>
+                        <p className="text-[10px] text-white/40 capitalize">{user?.role.toLowerCase()}</p>
+                    </div>
                 </div>
                 <button
-                onClick={() => {
-                    clearSession();
-                    navigate('/');
-                }}
-                className="w-full px-4 py-2.5 rounded-xl text-[13px] font-medium text-left text-white/65 hover:bg-white/10 hover:text-white transition-colors"
+                    onClick={() => {
+                        clearSession();
+                        navigate('/');
+                    }}
+                    className="w-full px-4 py-2.5 rounded-xl text-[13px] font-medium text-left text-white/65 hover:bg-white/10 hover:text-white transition-colors"
                 >
-                Logout
+                    Logout
                 </button>
             </div>
         </aside>

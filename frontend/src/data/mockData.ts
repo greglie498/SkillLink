@@ -9,6 +9,7 @@ export interface Opportunity {
     duration: string;
     deadline: string;
     description?: string;
+    businessRating?: { average: number; count: number} |  null;
 }
 
 export interface TalentProfile {

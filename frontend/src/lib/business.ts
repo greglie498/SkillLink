@@ -1,3 +1,6 @@
+import type { RatingDto } from "../components/RatingBadge";
+import type { ReviewDto } from "../components/ReviewCard";
+
 export type OpportunityStatus = 'DRAFT' | 'PUBLISHED' | 'CLOSED' | 'ARCHIVED';
 
 export interface BusinessOpportunity {
@@ -24,6 +27,7 @@ export const opportunityStatusStyle: Record<OpportunityStatus, string> = {
 };
 
 export interface Applicant {
+    rating: RatingDto | null | undefined;
     id: string;
     status: 'SUBMITTED' | 'SHORTLISTED' | 'REJECTED' | 'SELECTED';
     proposal: string;
@@ -37,6 +41,7 @@ export interface Applicant {
         skills: {name: string; proficiency: string }[];
         education: { institution: string; qualification: string; startYear: number | null; endYear: number | null}[];
     };
+    projectId: string | null;
     portfolioLinks: { title: string, url: string }[];
     matchScore: number;
     matchedSkills: string[];
@@ -62,6 +67,8 @@ export interface BusinessProfileDto {
     organisationName: string;
     industry: string | null;
     description: string | null;
+    rating: RatingDto | null;
+    reviews: ReviewDto[];
     contactPerson: string | null;
     location: string | null;
     verification: Verification;

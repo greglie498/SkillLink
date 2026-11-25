@@ -70,6 +70,7 @@ export default function TalentDashboard() {
             label="Applications"
             value={applications.length}
             hint={`${countStatus('SUBMITTED')} awaiting a decision`}
+            to='/applications'
           />
           <StatCard icon="users" label="Shortlisted" value={countStatus('SHORTLISTED')} />
           <StatCard icon="check" label="Selected" value={countStatus('SELECTED')} />

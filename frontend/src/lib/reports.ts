@@ -86,3 +86,16 @@ export interface BusinessReportData {
     }[];
     needsAttention: { id: string; title: string; reasons: string[] }[];
 }
+
+export interface PeriodReport {
+    from: string;
+    to: string;
+    registrations: {
+      talent: any; total: number; business: number
+};
+    opportunitiesPosted: number;
+    applications: number;
+    selections: number;
+    completedProjects: number;
+    activeNow: number;
+}

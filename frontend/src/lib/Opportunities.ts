@@ -1,4 +1,5 @@
 import type { Opportunity } from "../data/mockData";
+import type {RatingDto} from "../components/RatingBadge";
 
 export interface ApiOpportunity {
     id: string;
@@ -15,6 +16,7 @@ export interface ApiOpportunity {
     deadline: string;
     matchScore?: number;
     matchedSkills?: string[];
+    businessRating?: RatingDto | null;
 }
 
 export interface MatchDto {
@@ -44,5 +46,6 @@ export function toOpportunity(o: ApiOpportunity): Opportunity {
         budget: formatBudget(o.compensationAmount),
         duration: formatDuration(o.durationWeeks),
         deadline: o.deadline,
+        businessRating: o.businessRating ?? null,
     };
 }

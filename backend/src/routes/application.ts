@@ -40,6 +40,7 @@ router.get(
         opportunity: {
           select: { id: true, title: true, business: { select: { organisationName: true } } },
         },
+        project: { select:{  id: true } },
       },
     });
 
@@ -51,6 +52,7 @@ router.get(
         opportunityId: a.opportunity.id,
         opportunityTitle: a.opportunity.title,
         business: a.opportunity.business.organisationName,
+        projectid: a.project?.id ?? null,
       }))
     );
   })
@@ -140,7 +142,7 @@ router.post(
     } catch (err) {
       // Two simultaneous submissions: the unique constraint stops the second
       if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === 'P2002') {
-        return res.status(409).json({ message: 'You have already applied to this opportunity.' });
+        return res.status(409).json({ message: 'You have already applied to this opportunity.', link: `/business/opportunities/${opportunityId}/applicants`, });
       }
       throw err;
     }

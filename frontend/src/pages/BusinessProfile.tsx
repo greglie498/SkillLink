@@ -6,6 +6,7 @@ import TextAreaField from '../components/TextAreaField';
 import { api, ApiError } from '../lib/api';
 import { verificationLabel, verificationStyle, type BusinessProfileDto } from '../lib/business';
 import { validateRequired, validateMaxLength } from '../utils/validation';
+import ReviewsCard from '../components/ReviewCard';
 
 interface ProfileErrors {
   organisationName: string | null;
@@ -250,6 +251,7 @@ export default function BusinessProfile() {
                                 <button type="submit" disabled={docBusy} className="btn btn-secondary btn-sm">
                                     {docBusy ? 'Submitting...' : 'Submit for verification'}
                                 </button>
+                                <ReviewsCard rating={profile.rating} reviews={profile.reviews} />
                             </form>
                             )}
                         </div>

@@ -6,6 +6,7 @@ import TextAreaField from '../components/TextAreaField';
 import { api, ApiError } from '../lib/api';
 import { formatBudget, type ApiOpportunity, type MatchDto } from '../lib/opportunities';
 import { validateRequired, validateLength } from '../utils/validation';
+import RatingBadge from '../components/RatingBadge';
 
 interface PortfolioLink {
   id: string;
@@ -93,7 +94,7 @@ export default function ApplyForOpportunity() {
     return (
         <div className="flex min-h-screen bg-surface">
             <Sidebar />
-            <main className="flex-1 min-w-0 p-8 max-w-3xl">
+            <main className="flex-1 min-w-0 p-8 max-w-none">
                 <Link to={`/opportunities/${id}`} className="text-sm text-muted hover:text-primary mb-5 inline-block">
                 &larr; Back to opportunity
                 </Link>
@@ -107,6 +108,10 @@ export default function ApplyForOpportunity() {
                     title={`Apply: ${opp.title}`}
                     sub={`${opp.business} - Deadline ${opp.deadline} - ${formatBudget(opp.compensationAmount)}`}
                     />
+
+                    <div className='mt-4 mb-6'>
+                        <RatingBadge rating={opp.businessRating} />
+                    </div>
 
                     <form onSubmit={handleSubmit} noValidate className="space-y-6">
                     {formError && <p className="text-sm text-error">{formError}</p>}

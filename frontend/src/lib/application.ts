@@ -5,6 +5,7 @@ export interface ApplicationDto {
     opportunityId: string;
     opportunityTitle: string;
     business: string;
+    projectId: string | null;
 }
 
 export const statusLabel: Record<ApplicationDto['status'], string> = {

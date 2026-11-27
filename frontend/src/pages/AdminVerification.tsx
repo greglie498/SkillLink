@@ -60,7 +60,7 @@ export default function AdminVerification() {
     return (
         <div className="flex min-h-screen bg-surface">
             <Sidebar />
-            <main className="flex-1 min-w-0 p-8 max-w-4xl">
+            <main className="flex-1 min-w-0 p-8 max-w-none">
                 <PageHeader title="Verification Queue" sub="Review the registration documents businesses submit before they can publish." />
 
                 <div className="grid grid-cols-3 gap-4 mb-6">
